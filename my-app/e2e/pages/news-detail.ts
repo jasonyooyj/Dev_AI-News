@@ -74,7 +74,8 @@ export class NewsDetailPage extends BasePage {
     const titleLocator = this.page.locator('[role="dialog"] h2').or(
       this.page.locator('[role="dialog"]').locator('div').first(),
     );
-    return titleLocator.textContent() ?? '';
+    const text = await titleLocator.textContent();
+    return text ?? '';
   }
 
   /**
@@ -113,18 +114,20 @@ export class NewsDetailPage extends BasePage {
    * Get news category
    */
   async getCategory(): Promise<string> {
-    return this.categoryBadge.textContent() ?? '';
+    const text = await this.categoryBadge.textContent();
+    return text ?? '';
   }
 
   /**
    * Get full article content
    */
   async getFullArticleContent(): Promise<string> {
-    return this.page
+    const text = await this.page
       .locator('[role="dialog"]')
       .locator('[class*="prose"] p')
       .first()
-      .textContent() ?? '';
+      .textContent();
+    return text ?? '';
   }
 
   /**
@@ -179,7 +182,8 @@ export class NewsDetailPage extends BasePage {
    * Get generated content text
    */
   async getGeneratedContent(): Promise<string> {
-    return this.generatedContent.textContent() ?? '';
+    const text = await this.generatedContent.textContent();
+    return text ?? '';
   }
 
   /**
@@ -231,7 +235,8 @@ export class NewsDetailPage extends BasePage {
    * Get meta information (status, source, date)
    */
   async getMetaInfo(): Promise<string> {
-    return this.metaInfo.textContent() ?? '';
+    const text = await this.metaInfo.textContent();
+    return text ?? '';
   }
 
   /**

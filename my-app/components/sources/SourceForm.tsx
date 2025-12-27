@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Rss, Link2 } from 'lucide-react';
 import { Modal, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Source } from '@/types/news';
+import { sourceFormSchema, SourceFormData } from '@/lib/validations';
 
 interface SourceFormProps {
   isOpen: boolean;
@@ -15,12 +18,6 @@ interface SourceFormProps {
   isLoading?: boolean;
 }
 
-interface FormErrors {
-  name?: string;
-  websiteUrl?: string;
-  rssUrl?: string;
-}
-
 export function SourceForm({
   isOpen,
   onClose,
@@ -28,79 +25,56 @@ export function SourceForm({
   source,
   isLoading = false,
 }: SourceFormProps) {
-  const [name, setName] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
-  const [rssUrl, setRssUrl] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [errors, setErrors] = useState<FormErrors>({});
-
   const isEditing = !!source;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<SourceFormData>({
+    resolver: zodResolver(sourceFormSchema),
+    defaultValues: {
+      name: '',
+      websiteUrl: '',
+      rssUrl: '',
+      isActive: true,
+    },
+  });
+
+  const isActive = watch('isActive');
 
   useEffect(() => {
     if (source) {
-      setName(source.name);
-      setWebsiteUrl(source.websiteUrl);
-      setRssUrl(source.rssUrl || '');
-      setIsActive(source.isActive);
+      reset({
+        name: source.name,
+        websiteUrl: source.websiteUrl,
+        rssUrl: source.rssUrl || '',
+        isActive: source.isActive,
+      });
     } else {
-      setName('');
-      setWebsiteUrl('');
-      setRssUrl('');
-      setIsActive(true);
+      reset({
+        name: '',
+        websiteUrl: '',
+        rssUrl: '',
+        isActive: true,
+      });
     }
-    setErrors({});
-  }, [source, isOpen]);
+  }, [source, isOpen, reset]);
 
-  const validateUrl = (url: string): boolean => {
-    if (!url) return true;
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const validate = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    if (!websiteUrl.trim()) {
-      newErrors.websiteUrl = 'Website URL is required';
-    } else if (!validateUrl(websiteUrl)) {
-      newErrors.websiteUrl = 'Please enter a valid URL';
-    }
-
-    if (rssUrl && !validateUrl(rssUrl)) {
-      newErrors.rssUrl = 'Please enter a valid RSS URL';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-
-    if (!validate()) return;
-
+  const onFormSubmit = (data: SourceFormData) => {
     onSubmit({
-      name: name.trim(),
-      websiteUrl: websiteUrl.trim(),
-      rssUrl: rssUrl.trim() || undefined,
-      isActive,
+      name: data.name.trim(),
+      websiteUrl: data.websiteUrl.trim(),
+      rssUrl: data.rssUrl?.trim() || undefined,
+      isActive: data.isActive,
     });
   };
 
   const handleClose = () => {
-    setName('');
-    setWebsiteUrl('');
-    setRssUrl('');
-    setIsActive(true);
-    setErrors({});
+    reset();
     onClose();
   };
 
@@ -116,13 +90,12 @@ export function SourceForm({
       }
       size="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-5">
         <Input
           label="Source Name"
           placeholder="e.g., TechCrunch AI News"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          error={errors.name}
+          {...register('name')}
+          error={errors.name?.message}
           leftIcon={<Link2 className="w-4 h-4" />}
           required
         />
@@ -130,9 +103,8 @@ export function SourceForm({
         <Input
           label="Website URL"
           placeholder="https://example.com"
-          value={websiteUrl}
-          onChange={(e) => setWebsiteUrl(e.target.value)}
-          error={errors.websiteUrl}
+          {...register('websiteUrl')}
+          error={errors.websiteUrl?.message}
           type="url"
           leftIcon={<Link2 className="w-4 h-4" />}
           helperText="The main website URL of the news source"
@@ -142,9 +114,8 @@ export function SourceForm({
         <Input
           label="RSS Feed URL"
           placeholder="https://example.com/feed.xml"
-          value={rssUrl}
-          onChange={(e) => setRssUrl(e.target.value)}
-          error={errors.rssUrl}
+          {...register('rssUrl')}
+          error={errors.rssUrl?.message}
           type="url"
           leftIcon={<Rss className="w-4 h-4" />}
           helperText="Optional: Add an RSS feed URL for automatic fetching"
@@ -165,7 +136,7 @@ export function SourceForm({
             type="button"
             role="switch"
             aria-checked={isActive}
-            onClick={() => setIsActive(!isActive)}
+            onClick={() => setValue('isActive', !isActive)}
             className={`
               relative inline-flex h-6 w-11 items-center rounded-full transition-colors
               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2

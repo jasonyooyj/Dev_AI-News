@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { NewsItem, Source, NewsCategory, NEWS_CATEGORY_LABELS } from '@/types/news';
+import { formatCompactDate } from '@/lib/date';
 
 interface NewsCardProps {
   news: NewsItem;
@@ -19,25 +20,6 @@ interface NewsCardProps {
   onView?: (news: NewsItem) => void;
   onDelete?: (news: NewsItem) => void;
   isSummarizing?: boolean;
-}
-
-function formatDate(dateString?: string): string {
-  if (!dateString) return 'Unknown date';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffHours < 1) return 'Just now';
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  });
 }
 
 const categoryVariants: Record<NewsCategory, 'info' | 'success' | 'warning' | 'danger' | 'default'> = {
@@ -113,7 +95,7 @@ export const NewsCard = memo(function NewsCard({
           </div>
           <div className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400 shrink-0">
             <Clock className="w-3 h-3" />
-            <span>{formatDate(news.publishedAt || news.createdAt)}</span>
+            <span>{formatCompactDate(news.publishedAt || news.createdAt)}</span>
           </div>
         </div>
 
