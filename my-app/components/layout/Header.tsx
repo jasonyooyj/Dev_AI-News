@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -42,6 +42,7 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
   const pathname = usePathname();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -54,12 +55,25 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
     document.documentElement.classList.toggle('dark', initialTheme === 'dark');
   }, []);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
+    if (isAnimating) return;
+
+    setIsAnimating(true);
+
+    // Add theme-transition class for smooth color transitions
+    document.documentElement.classList.add('theme-transition');
+
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
+
+    // Remove transition class after animation completes
+    setTimeout(() => {
+      document.documentElement.classList.remove('theme-transition');
+      setIsAnimating(false);
+    }, 300);
+  }, [theme, isAnimating]);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md">
@@ -121,20 +135,41 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
         {/* Right: Theme Toggle */}
         <div className="flex items-center gap-2">
           {mounted && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={toggleTheme}
+              disabled={isAnimating}
               aria-label={
                 theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'
               }
+              className="
+                theme-toggle-btn
+                relative flex items-center justify-center
+                w-10 h-10 rounded-xl
+                bg-zinc-100 dark:bg-zinc-800
+                text-zinc-700 dark:text-zinc-200
+                hover:bg-zinc-200 dark:hover:bg-zinc-700
+                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                dark:focus:ring-offset-zinc-900
+                disabled:cursor-not-allowed
+              "
             >
-              {theme === 'light' ? (
-                <Moon className="w-5 h-5" />
-              ) : (
-                <Sun className="w-5 h-5" />
-              )}
-            </Button>
+              <span className="relative w-5 h-5">
+                {/* Sun Icon */}
+                <Sun
+                  className={`
+                    absolute inset-0 w-5 h-5
+                    ${theme === 'dark' ? 'theme-icon-enter' : 'opacity-0 scale-50'}
+                  `}
+                />
+                {/* Moon Icon */}
+                <Moon
+                  className={`
+                    absolute inset-0 w-5 h-5
+                    ${theme === 'light' ? 'theme-icon-enter' : 'opacity-0 scale-50'}
+                  `}
+                />
+              </span>
+            </button>
           )}
         </div>
       </div>
