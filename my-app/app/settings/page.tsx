@@ -2,6 +2,7 @@
 
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StyleEditor } from '@/components/settings/StyleEditor';
+import { AIProviderSettings } from '@/components/settings/AIProviderSettings';
 import { useStyleTemplates } from '@/hooks/useStyleTemplates';
 
 export default function SettingsPage() {
@@ -33,9 +34,12 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
           <p className="text-muted-foreground">
-            Manage your style templates and customize AI-generated content for different platforms.
+            Manage your AI provider, style templates, and customize AI-generated content.
           </p>
         </div>
+
+        {/* AI Provider Settings */}
+        <AIProviderSettings />
 
         {/* Style Editor */}
         <StyleEditor

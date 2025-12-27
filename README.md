@@ -1,6 +1,6 @@
 # AI 뉴스 대시보드 (AI News Dashboard)
 
-> 최신 AI 기술 뉴스를 수집하고, OpenAI GPT를 활용하여 한글로 요약 및 소셜 미디어 플랫폼별로 포맷팅하는 웹 애플리케이션
+> 최신 AI 기술 뉴스를 수집하고, OpenAI GPT 또는 DeepSeek를 활용하여 한글로 요약 및 소셜 미디어 플랫폼별로 포맷팅하는 웹 애플리케이션
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19.2.3-blue?style=flat-square&logo=react)
@@ -22,7 +22,8 @@
 - localStorage 기반 로컬 데이터 저장
 
 ### 3. AI 기반 컨텐츠 가공
-- **OpenAI GPT-4o-mini** 모델을 활용한 지능형 요약
+- **멀티 AI 프로바이더 지원**: OpenAI GPT-4o-mini 또는 DeepSeek Chat 선택 가능
+- **AI 프로바이더 설정**: Settings 페이지에서 원하는 AI 서비스 선택
 - **3줄 핵심 요약**: 뉴스 수집 시 자동으로 핵심 포인트 3개 추출
 - **카테고리 자동 분류**: product, update, research, announcement 등으로 분류
 - 원문 영어 기사를 자연스러운 한글로 번역 및 요약
@@ -68,6 +69,7 @@
 ### Backend & API
 - **Next.js API Routes** - 서버리스 API 엔드포인트
 - **OpenAI API** - GPT-4o-mini 모델 활용
+- **DeepSeek API** - OpenAI 호환 DeepSeek Chat 모델 (비용 효율적 대안)
 - **RSS Parser** - RSS 피드 파싱
 - **Cheerio** - HTML 스크래핑 및 파싱
 
@@ -100,10 +102,22 @@ pnpm install
 루트 디렉토리에 `.env.local` 파일 생성:
 
 ```env
+# AI 프로바이더 설정 (최소 하나 필수)
 OPENAI_API_KEY=your_openai_api_key_here
+# 또는
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+# 기본 프로바이더 설정 (선택사항, 기본값: openai)
+AI_PROVIDER=openai  # 또는 deepseek
 ```
 
-OpenAI API 키는 [OpenAI Platform](https://platform.openai.com/api-keys)에서 발급받을 수 있습니다.
+**API 키 발급 방법:**
+- OpenAI API 키: [OpenAI Platform](https://platform.openai.com/api-keys)에서 발급
+- DeepSeek API 키: [DeepSeek Platform](https://platform.deepseek.com/)에서 발급
+
+**프로바이더 선택 가이드:**
+- **OpenAI (GPT-4o-mini)**: 높은 품질, 안정적인 성능, JSON 모드 지원
+- **DeepSeek (DeepSeek-Chat)**: 비용 효율적, OpenAI 호환 API, 중국어 강점
 
 ### 5. 개발 서버 실행
 ```bash
@@ -162,12 +176,14 @@ my-app/
 │   │   ├── CopyButton.tsx
 │   │   └── FeedbackButtons.tsx    # 피드백 및 재생성 UI
 │   └── settings/                  # 설정 컴포넌트
+│       ├── AIProviderSettings.tsx # AI 프로바이더 선택 UI
 │       └── StyleEditor.tsx        # 스타일 템플릿 편집기
 ├── hooks/                         # 커스텀 React Hooks
 │   ├── useLocalStorage.ts
 │   ├── useSources.ts
 │   ├── useNews.ts
 │   ├── useOpenAI.ts
+│   ├── useAIProvider.ts           # AI 프로바이더 상태 관리
 │   └── useStyleTemplates.ts       # 스타일 템플릿 관리
 ├── lib/                           # 유틸리티 함수
 │   ├── storage.ts                 # localStorage CRUD (템플릿 포함)
@@ -244,6 +260,24 @@ interface PlatformContent {
 
 ## API 엔드포인트
 
+### GET /api/openai
+AI 프로바이더 상태를 확인합니다.
+
+**Response:**
+```json
+{
+  "providers": {
+    "openai": true,
+    "deepseek": false
+  },
+  "defaultProvider": "openai",
+  "models": {
+    "openai": "gpt-4o-mini",
+    "deepseek": "deepseek-chat"
+  }
+}
+```
+
 ### POST /api/rss
 RSS 피드에서 뉴스 목록을 가져옵니다.
 
@@ -291,7 +325,10 @@ RSS 피드에서 뉴스 목록을 가져옵니다.
 ```
 
 ### POST /api/openai
-OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 모드를 지원합니다.
+OpenAI 또는 DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 모드를 지원합니다.
+
+**공통 파라미터:**
+- `provider` (optional): 'openai' | 'deepseek' - 사용할 AI 프로바이더 (미지정 시 환경변수 또는 기본값 사용)
 
 #### Mode 1: summarize (뉴스 요약)
 뉴스 수집 시 3줄 핵심 요약 및 카테고리 분류
@@ -301,7 +338,8 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
 {
   "mode": "summarize",
   "title": "News Title",
-  "content": "News Content"
+  "content": "News Content",
+  "provider": "openai"  // optional
 }
 ```
 
@@ -327,6 +365,7 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
   "title": "News Title",
   "content": "News Content",
   "platform": "twitter",
+  "provider": "deepseek",  // optional
   "styleTemplate": {
     "tone": "전문적이면서 친근한 톤",
     "characteristics": ["이모지 사용", "질문형 시작"],
@@ -356,7 +395,8 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
     "예시 텍스트 1",
     "예시 텍스트 2",
     "예시 텍스트 3"
-  ]
+  ],
+  "provider": "openai"  // optional
 }
 ```
 
@@ -382,7 +422,8 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
   "mode": "regenerate",
   "previousContent": "기존 콘텐츠",
   "feedback": "더 전문적으로. 해시태그 줄이기",
-  "platform": "linkedin"
+  "platform": "linkedin",
+  "provider": "deepseek"  // optional
 }
 ```
 
@@ -396,13 +437,21 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
 
 ## 사용 방법
 
-### 1. 뉴스 소스 관리
+### 1. AI 프로바이더 설정 (선택사항)
+1. 상단 메뉴에서 "Settings" 클릭
+2. "AI Provider" 섹션에서 원하는 프로바이더 선택
+   - OpenAI (GPT-4o-mini): 높은 품질, JSON 모드 지원
+   - DeepSeek (DeepSeek-Chat): 비용 효율적, OpenAI 호환
+3. 선택한 프로바이더가 자동으로 localStorage에 저장됨
+4. 이후 모든 AI 요청에서 선택한 프로바이더가 사용됨
+
+### 2. 뉴스 소스 관리
 1. 상단 메뉴에서 "Sources" 클릭
 2. "Add New Source" 버튼으로 새 소스 추가
 3. 이름, 웹사이트 URL, RSS URL(선택사항) 입력
 4. 기존 소스는 편집 또는 비활성화 가능
 
-### 2. 뉴스 수집
+### 3. 뉴스 수집
 #### RSS 피드 자동 수집:
 1. 대시보드에서 "Collect News" 탭 선택
 2. "Fetch All RSS Sources" 클릭하여 모든 활성 소스에서 뉴스 가져오기
@@ -414,7 +463,7 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
 3. "Scrape" 버튼 클릭하여 내용 추출
 4. 미리보기 확인 후 "Save as News" 클릭
 
-### 3. 스타일 템플릿 설정 (선택사항)
+### 4. 스타일 템플릿 설정 (선택사항)
 1. 상단 메뉴에서 "Settings" 클릭
 2. "Add Template" 버튼으로 새 템플릿 생성
 3. 플랫폼 선택 (Twitter, Threads, Instagram, LinkedIn)
@@ -424,7 +473,7 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
 7. 분석 결과 확인 후 "Create Template" 저장
 8. 별 아이콘을 클릭하여 기본 템플릿으로 설정
 
-### 4. AI 가공 및 포맷팅
+### 5. AI 가공 및 포맷팅
 1. "News Feed" 탭에서 뉴스 카드의 "View Details" 클릭
 2. 뉴스 상세 모달에서 원하는 플랫폼 탭 선택
 3. (선택사항) 스타일 템플릿 선택
@@ -436,13 +485,16 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
    - "Regenerate" 버튼으로 피드백 반영하여 재생성
 7. 만족하면 "Copy" 버튼으로 클립보드에 복사
 
-### 5. 소셜 미디어 게시
+### 6. 소셜 미디어 게시
 1. 복사된 콘텐츠를 해당 소셜 미디어 앱에 붙여넣기
 2. 필요시 추가 편집 후 게시
 
 ## 개발 로드맵
 
-### 완료된 기능 (v2.0)
+### 완료된 기능 (v2.1)
+- [x] 멀티 AI 프로바이더 지원 (OpenAI + DeepSeek)
+- [x] AI 프로바이더 선택 UI
+- [x] 프로바이더별 모델 및 기능 자동 조정
 - [x] 3줄 핵심 요약 및 카테고리 자동 분류
 - [x] 스타일 템플릿 관리 시스템
 - [x] AI 기반 문체 분석
@@ -451,6 +503,7 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
 - [x] Settings 페이지 추가
 
 ### 향후 개발 계획
+- [ ] 추가 AI 프로바이더 지원 (Claude, Gemini 등)
 - [ ] 다크 모드 지원
 - [ ] 뉴스 필터링 및 검색 기능 (카테고리, 날짜, 키워드)
 - [ ] 즐겨찾기/북마크 기능
@@ -465,10 +518,13 @@ OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 �
 
 ## 문제 해결
 
-### OpenAI API 에러
-- `.env.local` 파일에 유효한 API 키가 설정되어 있는지 확인
+### AI API 에러
+- `.env.local` 파일에 유효한 API 키가 설정되어 있는지 확인 (OPENAI_API_KEY 또는 DEEPSEEK_API_KEY)
 - API 키에 충분한 크레딧이 있는지 확인
-- OpenAI API 상태 페이지 확인: https://status.openai.com/
+- OpenAI API 상태: https://status.openai.com/
+- DeepSeek API 상태: https://platform.deepseek.com/
+- Settings 페이지에서 사용 가능한 프로바이더 확인
+- 특정 프로바이더 문제 발생 시 다른 프로바이더로 전환 시도
 
 ### RSS 피드 파싱 실패
 - RSS URL이 올바른지 확인

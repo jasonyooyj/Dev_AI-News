@@ -3,6 +3,14 @@
 import { useState, useCallback } from 'react';
 import { NewsItem, QuickSummary, PlatformContent, Platform, StyleTemplate } from '@/types/news';
 import { updateNewsItem } from '@/lib/storage';
+import { AIProvider } from './useAIProvider';
+
+const PROVIDER_STORAGE_KEY = 'ai-provider-preference';
+
+function getSelectedProvider(): AIProvider | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return (localStorage.getItem(PROVIDER_STORAGE_KEY) as AIProvider) || undefined;
+}
 
 export function useOpenAI() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -14,6 +22,7 @@ export function useOpenAI() {
     content: string
   ): Promise<QuickSummary | null> => {
     try {
+      const provider = getSelectedProvider();
       const response = await fetch('/api/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -21,6 +30,7 @@ export function useOpenAI() {
           mode: 'summarize',
           title,
           content,
+          provider,
         }),
       });
 
@@ -50,6 +60,7 @@ export function useOpenAI() {
     setError(null);
 
     try {
+      const provider = getSelectedProvider();
       const response = await fetch('/api/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,6 +70,7 @@ export function useOpenAI() {
           content: newsItem.originalContent,
           url: newsItem.url,
           platform,
+          provider,
           styleTemplate: styleTemplate ? {
             tone: styleTemplate.tone,
             characteristics: styleTemplate.characteristics,
@@ -97,6 +109,7 @@ export function useOpenAI() {
     setError(null);
 
     try {
+      const provider = getSelectedProvider();
       const response = await fetch('/api/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,6 +118,7 @@ export function useOpenAI() {
           previousContent,
           feedback,
           platform,
+          provider,
         }),
       });
 

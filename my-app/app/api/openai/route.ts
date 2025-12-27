@@ -1,18 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-function getOpenAIClient() {
+type AIProvider = 'openai' | 'deepseek';
+
+interface ProviderConfig {
+  client: OpenAI;
+  model: string;
+  supportsJsonMode: boolean;
+}
+
+function getAIClient(provider?: AIProvider): ProviderConfig {
+  const selectedProvider = provider || (process.env.AI_PROVIDER as AIProvider) || 'openai';
+
+  if (selectedProvider === 'deepseek') {
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) {
+      throw new Error('DEEPSEEK_API_KEY is not configured');
+    }
+    return {
+      client: new OpenAI({
+        apiKey,
+        baseURL: 'https://api.deepseek.com/v1',
+      }),
+      model: 'deepseek-chat',
+      supportsJsonMode: false, // DeepSeek doesn't support response_format
+    };
+  }
+
+  // Default: OpenAI
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY is not configured');
   }
-  return new OpenAI({ apiKey });
+  return {
+    client: new OpenAI({ apiKey }),
+    model: 'gpt-4o-mini',
+    supportsJsonMode: true,
+  };
 }
 
 type Mode = 'summarize' | 'generate' | 'analyze-style' | 'regenerate';
 
 interface RequestBody {
   mode: Mode;
+  provider?: AIProvider;
   // summarize
   title?: string;
   content?: string;
@@ -31,19 +62,55 @@ interface RequestBody {
   feedback?: string;
 }
 
+// GET endpoint to check available providers
+export async function GET() {
+  const hasOpenAI = !!process.env.OPENAI_API_KEY;
+  const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
+  const defaultProvider = (process.env.AI_PROVIDER as AIProvider) || 'openai';
+
+  return NextResponse.json({
+    providers: {
+      openai: hasOpenAI,
+      deepseek: hasDeepSeek,
+    },
+    defaultProvider: hasOpenAI || hasDeepSeek ? defaultProvider : null,
+    models: {
+      openai: 'gpt-4o-mini',
+      deepseek: 'deepseek-chat',
+    },
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    const body: RequestBody = await request.json();
+    const { mode, provider } = body;
+
+    // Check if at least one provider is configured
+    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
+
+    if (!hasOpenAI && !hasDeepSeek) {
       return NextResponse.json(
-        { error: 'OpenAI API key is not configured' },
+        { error: 'No AI provider API key is configured. Please set OPENAI_API_KEY or DEEPSEEK_API_KEY.' },
         { status: 500 }
       );
     }
 
-    const body: RequestBody = await request.json();
-    const { mode } = body;
+    // Get the AI client based on provider preference
+    let aiConfig: ProviderConfig;
+    try {
+      aiConfig = getAIClient(provider);
+    } catch {
+      // Fallback to available provider
+      if (hasDeepSeek) {
+        aiConfig = getAIClient('deepseek');
+      } else {
+        aiConfig = getAIClient('openai');
+      }
+    }
 
-    const openai = getOpenAIClient();
+    const { client: ai, model, supportsJsonMode } = aiConfig;
 
     // === MODE: summarize ===
     // 뉴스 수집 시 3줄 핵심 요약 생성
@@ -57,12 +124,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const completion = await ai.chat.completions.create({
+        model,
         messages: [
           {
             role: 'system',
-            content: `당신은 AI 기술 뉴스를 분석하는 전문가입니다. 뉴스의 핵심 포인트를 추출하고 카테고리를 분류합니다.`,
+            content: `당신은 AI 기술 뉴스를 분석하는 전문가입니다. 뉴스의 핵심 포인트를 추출하고 카테고리를 분류합니다. 반드시 유효한 JSON 형식으로만 응답하세요.`,
           },
           {
             role: 'user',
@@ -85,7 +152,7 @@ export async function POST(request: NextRequest) {
           },
         ],
         temperature: 0.5,
-        response_format: { type: 'json_object' },
+        ...(supportsJsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
       const result = JSON.parse(completion.choices[0].message.content || '{}');
@@ -130,12 +197,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const completion = await ai.chat.completions.create({
+        model,
         messages: [
           {
             role: 'system',
-            content: `당신은 소셜 미디어 콘텐츠 작성 전문가입니다. 주어진 뉴스를 ${config.description}에 맞게 한국어로 작성합니다.${stylePrompt}`,
+            content: `당신은 소셜 미디어 콘텐츠 작성 전문가입니다. 주어진 뉴스를 ${config.description}에 맞게 한국어로 작성합니다.${stylePrompt} 반드시 유효한 JSON 형식으로만 응답하세요.`,
           },
           {
             role: 'user',
@@ -156,7 +223,7 @@ ${url ? `원문 링크: ${url}` : ''}
           },
         ],
         temperature: 0.7,
-        response_format: { type: 'json_object' },
+        ...(supportsJsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
       const result = JSON.parse(completion.choices[0].message.content || '{}');
@@ -175,12 +242,12 @@ ${url ? `원문 링크: ${url}` : ''}
         );
       }
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const completion = await ai.chat.completions.create({
+        model,
         messages: [
           {
             role: 'system',
-            content: `당신은 문체 분석 전문가입니다. 주어진 예시 텍스트들의 공통된 문체 특성을 분석합니다.`,
+            content: `당신은 문체 분석 전문가입니다. 주어진 예시 텍스트들의 공통된 문체 특성을 분석합니다. 반드시 유효한 JSON 형식으로만 응답하세요.`,
           },
           {
             role: 'user',
@@ -201,7 +268,7 @@ ${examples.map((e, i) => `예시 ${i + 1}:\n${e}`).join('\n\n')}
           },
         ],
         temperature: 0.5,
-        response_format: { type: 'json_object' },
+        ...(supportsJsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
       const result = JSON.parse(completion.choices[0].message.content || '{}');
@@ -229,12 +296,12 @@ ${examples.map((e, i) => `예시 ${i + 1}:\n${e}`).join('\n\n')}
 
       const config = platformConfigs[platform];
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const completion = await ai.chat.completions.create({
+        model,
         messages: [
           {
             role: 'system',
-            content: `당신은 소셜 미디어 콘텐츠 작성 전문가입니다. 피드백을 반영하여 콘텐츠를 개선합니다.`,
+            content: `당신은 소셜 미디어 콘텐츠 작성 전문가입니다. 피드백을 반영하여 콘텐츠를 개선합니다. 반드시 유효한 JSON 형식으로만 응답하세요.`,
           },
           {
             role: 'user',
@@ -255,7 +322,7 @@ ${previousContent}
           },
         ],
         temperature: 0.7,
-        response_format: { type: 'json_object' },
+        ...(supportsJsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
       const result = JSON.parse(completion.choices[0].message.content || '{}');
@@ -264,9 +331,10 @@ ${previousContent}
 
     return NextResponse.json({ error: 'Invalid mode' }, { status: 400 });
   } catch (error) {
-    console.error('OpenAI error:', error);
+    console.error('AI API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to process with AI' },
+      { error: `Failed to process with AI: ${errorMessage}` },
       { status: 500 }
     );
   }

@@ -12,6 +12,14 @@ import {
   setDefaultStyleTemplate as setDefaultInStorage,
 } from '@/lib/storage';
 import { v4 as uuidv4 } from 'uuid';
+import { AIProvider } from './useAIProvider';
+
+const PROVIDER_STORAGE_KEY = 'ai-provider-preference';
+
+function getSelectedProvider(): AIProvider | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return (localStorage.getItem(PROVIDER_STORAGE_KEY) as AIProvider) || undefined;
+}
 
 export function useStyleTemplates() {
   const [templates, setTemplates] = useState<StyleTemplate[]>([]);
@@ -73,12 +81,14 @@ export function useStyleTemplates() {
 
     setIsAnalyzing(true);
     try {
+      const provider = getSelectedProvider();
       const response = await fetch('/api/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'analyze-style',
           examples,
+          provider,
         }),
       });
 
