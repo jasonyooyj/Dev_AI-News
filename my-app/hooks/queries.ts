@@ -1,35 +1,18 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
-import { useNewsStore, useSourcesStore, useAIProviderStore } from '@/store';
-import { NewsItem, Platform, StyleTemplate, Source } from '@/types/news';
-
-// Query Keys
-export const queryKeys = {
-  providerStatus: ['provider-status'] as const,
-  rssFeed: (url: string) => ['rss-feed', url] as const,
-  scrape: (url: string) => ['scrape', url] as const,
-};
-
-// ============ AI Provider Queries ============
-export function useProviderStatus() {
-  return useQuery({
-    queryKey: queryKeys.providerStatus,
-    queryFn: api.provider.getStatus,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-}
+import { useNewsStore, useSourcesStore } from '@/store';
+import { Platform, StyleTemplate, Source } from '@/types/news';
 
 // ============ AI Mutations ============
 export function useSummarize() {
-  const provider = useAIProviderStore((s) => s.provider);
   const addSummary = useNewsStore((s) => s.addSummary);
 
   return useMutation({
     mutationFn: async ({ newsId, title, content }: { newsId: string; title: string; content: string }) => {
-      const result = await api.ai.summarize(title, content, provider);
+      const result = await api.ai.summarize(title, content);
       return { newsId, result };
     },
     onSuccess: ({ newsId, result }) => {
@@ -47,8 +30,6 @@ export function useSummarize() {
 }
 
 export function useGenerateContent() {
-  const provider = useAIProviderStore((s) => s.provider);
-
   return useMutation({
     mutationFn: async ({
       title,
@@ -65,7 +46,6 @@ export function useGenerateContent() {
     }) => {
       return api.ai.generate(title, content, platform, {
         url,
-        provider,
         styleTemplate: styleTemplate
           ? {
               tone: styleTemplate.tone,
@@ -85,8 +65,6 @@ export function useGenerateContent() {
 }
 
 export function useRegenerateContent() {
-  const provider = useAIProviderStore((s) => s.provider);
-
   return useMutation({
     mutationFn: async ({
       previousContent,
@@ -97,7 +75,7 @@ export function useRegenerateContent() {
       feedback: string;
       platform: Platform;
     }) => {
-      return api.ai.regenerate(previousContent, feedback, platform, provider);
+      return api.ai.regenerate(previousContent, feedback, platform);
     },
     onSuccess: () => {
       toast.success('Content regenerated');
@@ -109,11 +87,9 @@ export function useRegenerateContent() {
 }
 
 export function useAnalyzeStyle() {
-  const provider = useAIProviderStore((s) => s.provider);
-
   return useMutation({
     mutationFn: async (examples: string[]) => {
-      return api.ai.analyzeStyle(examples, provider);
+      return api.ai.analyzeStyle(examples);
     },
     onSuccess: () => {
       toast.success('Style analyzed');

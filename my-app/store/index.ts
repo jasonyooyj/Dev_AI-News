@@ -217,25 +217,6 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>()(
   )
 );
 
-// ============ AI Provider Store ============
-interface AIProviderState {
-  provider: 'openai' | 'deepseek';
-  setProvider: (provider: 'openai' | 'deepseek') => void;
-}
-
-export const useAIProviderStore = create<AIProviderState>()(
-  persist(
-    (set) => ({
-      provider: 'openai',
-      setProvider: (provider) => set({ provider }),
-    }),
-    {
-      name: 'ai-provider-preference',
-      storage: createJSONStorage(() => localStorage),
-    }
-  )
-);
-
 // ============ UI State Store (non-persisted) ============
 interface UIState {
   selectedNewsId: string | null;

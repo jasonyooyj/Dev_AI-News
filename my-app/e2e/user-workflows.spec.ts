@@ -83,19 +83,6 @@ test.describe('User Workflows', () => {
     await expect(page.getByRole('button', { name: 'View Details' }).first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('user can see AI provider status', async ({ page }) => {
-    await page.goto('/');
-
-    // API should return provider info (mocked)
-    const data = await page.evaluate(async () => {
-      const response = await fetch('/api/openai');
-      return response.json();
-    });
-
-    expect(data.providers).toBeDefined();
-    expect(data.models).toBeDefined();
-  });
-
   test('responsive design works on mobile', async ({ page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });

@@ -4,45 +4,6 @@ import { test, expect } from './fixtures';
  * API Route Tests - All calls are automatically mocked
  */
 test.describe('API Routes', () => {
-  test.describe('GET /api/openai - Provider Status', () => {
-    test('should return provider availability', async ({ page }) => {
-      await page.goto('/');
-
-      const data = await page.evaluate(async () => {
-        const response = await fetch('/api/openai');
-        return response.json();
-      });
-
-      expect(data).toHaveProperty('providers');
-      expect(data).toHaveProperty('defaultProvider');
-      expect(data).toHaveProperty('models');
-    });
-
-    test('should indicate available providers', async ({ page }) => {
-      await page.goto('/');
-
-      const data = await page.evaluate(async () => {
-        const response = await fetch('/api/openai');
-        return response.json();
-      });
-
-      expect(data.providers.openai).toBe(true);
-      expect(data.providers.deepseek).toBe(true);
-    });
-
-    test('should return model names', async ({ page }) => {
-      await page.goto('/');
-
-      const data = await page.evaluate(async () => {
-        const response = await fetch('/api/openai');
-        return response.json();
-      });
-
-      expect(typeof data.models.openai).toBe('string');
-      expect(typeof data.models.deepseek).toBe('string');
-    });
-  });
-
   test.describe('POST /api/openai - Content Generation', () => {
     test('should handle summarize mode', async ({ page }) => {
       await page.goto('/');

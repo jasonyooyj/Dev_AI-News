@@ -12,8 +12,7 @@ import { useSources } from '@/hooks/useSources';
 import { useNews } from '@/hooks/useNews';
 import { useOpenAI } from '@/hooks/useOpenAI';
 import { useStyleTemplates } from '@/hooks/useStyleTemplates';
-import { NewsItem, ProcessedNews, Source, Platform, PlatformContent } from '@/types/news';
-import { getProcessedNewsByNewsId } from '@/lib/storage';
+import { NewsItem, Source, Platform, PlatformContent } from '@/types/news';
 
 interface FetchResult {
   sourceId: string;
@@ -37,7 +36,6 @@ export default function DashboardPage() {
   const { templates: styleTemplates } = useStyleTemplates();
 
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  const [processedData, setProcessedData] = useState<ProcessedNews | null>(null);
   const [activeTab, setActiveTab] = useState<'news' | 'collect'>('news');
   const [summarizingIds, setSummarizingIds] = useState<string[]>([]);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -47,8 +45,6 @@ export default function DashboardPage() {
 
   const handleViewNews = (newsItem: NewsItem) => {
     setSelectedNews(newsItem);
-    const processed = getProcessedNewsByNewsId(newsItem.id);
-    setProcessedData(processed || null);
     setGeneratedContents({});
   };
 
@@ -133,14 +129,12 @@ export default function DashboardPage() {
     deleteNewsItem(newsItem.id);
     if (selectedNews?.id === newsItem.id) {
       setSelectedNews(null);
-      setProcessedData(null);
       setGeneratedContents({});
     }
   };
 
   const handleCloseNewsDetail = () => {
     setSelectedNews(null);
-    setProcessedData(null);
     setGeneratedContents({});
   };
 

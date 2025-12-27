@@ -1,6 +1,4 @@
-import { Platform, QuickSummary, PlatformContent, StyleTemplate } from '@/types/news';
-
-export type AIProvider = 'openai' | 'deepseek';
+import { Platform, StyleTemplate } from '@/types/news';
 
 // API Response types
 interface SummarizeResponse {
@@ -17,12 +15,6 @@ interface GenerateResponse {
 interface AnalyzeStyleResponse {
   tone: string;
   characteristics: string[];
-}
-
-interface ProviderStatusResponse {
-  providers: { openai: boolean; deepseek: boolean };
-  defaultProvider: AIProvider | null;
-  models: { openai: string; deepseek: string };
 }
 
 interface RssItem {
@@ -70,25 +62,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // API Client
 export const api = {
-  // AI Provider
-  provider: {
-    getStatus: async (): Promise<ProviderStatusResponse> => {
-      const response = await fetch('/api/openai');
-      return handleResponse<ProviderStatusResponse>(response);
-    },
-  },
-
-  // OpenAI endpoints
+  // AI endpoints (DeepSeek)
   ai: {
     summarize: async (
       title: string,
-      content: string,
-      provider?: AIProvider
+      content: string
     ): Promise<SummarizeResponse> => {
       const response = await fetch('/api/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'summarize', title, content, provider }),
+        body: JSON.stringify({ mode: 'summarize', title, content }),
       });
       return handleResponse<SummarizeResponse>(response);
     },
@@ -99,7 +82,6 @@ export const api = {
       platform: Platform,
       options?: {
         url?: string;
-        provider?: AIProvider;
         styleTemplate?: Pick<StyleTemplate, 'tone' | 'characteristics' | 'examples'>;
       }
     ): Promise<GenerateResponse> => {
@@ -117,14 +99,11 @@ export const api = {
       return handleResponse<GenerateResponse>(response);
     },
 
-    analyzeStyle: async (
-      examples: string[],
-      provider?: AIProvider
-    ): Promise<AnalyzeStyleResponse> => {
+    analyzeStyle: async (examples: string[]): Promise<AnalyzeStyleResponse> => {
       const response = await fetch('/api/openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'analyze-style', examples, provider }),
+        body: JSON.stringify({ mode: 'analyze-style', examples }),
       });
       return handleResponse<AnalyzeStyleResponse>(response);
     },
@@ -132,8 +111,7 @@ export const api = {
     regenerate: async (
       previousContent: string,
       feedback: string,
-      platform: Platform,
-      provider?: AIProvider
+      platform: Platform
     ): Promise<GenerateResponse> => {
       const response = await fetch('/api/openai', {
         method: 'POST',
@@ -143,7 +121,6 @@ export const api = {
           previousContent,
           feedback,
           platform,
-          provider,
         }),
       });
       return handleResponse<GenerateResponse>(response);
@@ -180,7 +157,6 @@ export type {
   SummarizeResponse,
   GenerateResponse,
   AnalyzeStyleResponse,
-  ProviderStatusResponse,
   RssItem,
   RssResponse,
   ScrapeResponse,

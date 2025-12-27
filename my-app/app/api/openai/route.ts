@@ -1,49 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-type AIProvider = 'openai' | 'deepseek';
-
-interface ProviderConfig {
-  client: OpenAI;
-  model: string;
-  supportsJsonMode: boolean;
-}
-
-function getAIClient(provider?: AIProvider): ProviderConfig {
-  const selectedProvider = provider || (process.env.AI_PROVIDER as AIProvider) || 'openai';
-
-  if (selectedProvider === 'deepseek') {
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) {
-      throw new Error('DEEPSEEK_API_KEY is not configured');
-    }
-    return {
-      client: new OpenAI({
-        apiKey,
-        baseURL: 'https://api.deepseek.com/v1',
-      }),
-      model: 'deepseek-reasoner',
-      supportsJsonMode: false, // DeepSeek doesn't support response_format
-    };
-  }
-
-  // Default: OpenAI
-  const apiKey = process.env.OPENAI_API_KEY;
+// DeepSeek 클라이언트 생성
+function getAIClient(): OpenAI {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    throw new Error('OPENAI_API_KEY is not configured');
+    throw new Error('DEEPSEEK_API_KEY is not configured');
   }
-  return {
-    client: new OpenAI({ apiKey }),
-    model: 'gpt-4o-mini',
-    supportsJsonMode: true,
-  };
+  return new OpenAI({
+    apiKey,
+    baseURL: 'https://api.deepseek.com/v1',
+  });
 }
+
+const MODEL = 'deepseek-reasoner';
 
 type Mode = 'summarize' | 'generate' | 'analyze-style' | 'regenerate';
 
 interface RequestBody {
   mode: Mode;
-  provider?: AIProvider;
   // summarize
   title?: string;
   content?: string;
@@ -62,55 +37,12 @@ interface RequestBody {
   feedback?: string;
 }
 
-// GET endpoint to check available providers
-export async function GET() {
-  const hasOpenAI = !!process.env.OPENAI_API_KEY;
-  const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
-  const defaultProvider = (process.env.AI_PROVIDER as AIProvider) || 'openai';
-
-  return NextResponse.json({
-    providers: {
-      openai: hasOpenAI,
-      deepseek: hasDeepSeek,
-    },
-    defaultProvider: hasOpenAI || hasDeepSeek ? defaultProvider : null,
-    models: {
-      openai: 'gpt-4o-mini',
-      deepseek: 'deepseek-reasoner',
-    },
-  });
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body: RequestBody = await request.json();
-    const { mode, provider } = body;
+    const { mode } = body;
 
-    // Check if at least one provider is configured
-    const hasOpenAI = !!process.env.OPENAI_API_KEY;
-    const hasDeepSeek = !!process.env.DEEPSEEK_API_KEY;
-
-    if (!hasOpenAI && !hasDeepSeek) {
-      return NextResponse.json(
-        { error: 'No AI provider API key is configured. Please set OPENAI_API_KEY or DEEPSEEK_API_KEY.' },
-        { status: 500 }
-      );
-    }
-
-    // Get the AI client based on provider preference
-    let aiConfig: ProviderConfig;
-    try {
-      aiConfig = getAIClient(provider);
-    } catch {
-      // Fallback to available provider
-      if (hasDeepSeek) {
-        aiConfig = getAIClient('deepseek');
-      } else {
-        aiConfig = getAIClient('openai');
-      }
-    }
-
-    const { client: ai, model, supportsJsonMode } = aiConfig;
+    const ai = getAIClient();
 
     // === MODE: summarize ===
     // 뉴스 수집 시 3줄 핵심 요약 생성
@@ -125,7 +57,7 @@ export async function POST(request: NextRequest) {
       }
 
       const completion = await ai.chat.completions.create({
-        model,
+        model: MODEL,
         messages: [
           {
             role: 'system',
@@ -152,7 +84,6 @@ export async function POST(request: NextRequest) {
           },
         ],
         temperature: 0.5,
-        ...(supportsJsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
       const result = JSON.parse(completion.choices[0].message.content || '{}');
@@ -198,7 +129,7 @@ export async function POST(request: NextRequest) {
       }
 
       const completion = await ai.chat.completions.create({
-        model,
+        model: MODEL,
         messages: [
           {
             role: 'system',
@@ -223,7 +154,6 @@ ${url ? `원문 링크: ${url}` : ''}
           },
         ],
         temperature: 0.7,
-        ...(supportsJsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
       const result = JSON.parse(completion.choices[0].message.content || '{}');
@@ -243,7 +173,7 @@ ${url ? `원문 링크: ${url}` : ''}
       }
 
       const completion = await ai.chat.completions.create({
-        model,
+        model: MODEL,
         messages: [
           {
             role: 'system',
@@ -268,7 +198,6 @@ ${examples.map((e, i) => `예시 ${i + 1}:\n${e}`).join('\n\n')}
           },
         ],
         temperature: 0.5,
-        ...(supportsJsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
       const result = JSON.parse(completion.choices[0].message.content || '{}');
@@ -297,7 +226,7 @@ ${examples.map((e, i) => `예시 ${i + 1}:\n${e}`).join('\n\n')}
       const config = platformConfigs[platform];
 
       const completion = await ai.chat.completions.create({
-        model,
+        model: MODEL,
         messages: [
           {
             role: 'system',
@@ -322,7 +251,6 @@ ${previousContent}
           },
         ],
         temperature: 0.7,
-        ...(supportsJsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
       const result = JSON.parse(completion.choices[0].message.content || '{}');

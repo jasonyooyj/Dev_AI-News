@@ -36,23 +36,8 @@ const mockResponses = {
 /**
  * Handle mock API response based on request mode
  */
-async function handleMockAPIResponse(route: Route, providerConfig: {
-  providers: { openai: boolean; deepseek: boolean };
-  defaultProvider: string | null;
-}) {
+async function handleMockAPIResponse(route: Route) {
   const request = route.request();
-
-  if (request.method() === 'GET') {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        ...providerConfig,
-        models: { openai: 'gpt-4o-mini', deepseek: 'deepseek-reasoner' },
-      }),
-    });
-    return;
-  }
 
   if (request.method() === 'POST') {
     try {
@@ -140,12 +125,9 @@ export const test = base.extend<{
    * Automatically mock all APIs before each test
    */
   autoMock: [async ({ page }, use) => {
-    // Mock OpenAI API
+    // Mock AI API (DeepSeek)
     await page.route('**/api/openai', async (route) => {
-      await handleMockAPIResponse(route, {
-        providers: { openai: true, deepseek: true },
-        defaultProvider: 'openai',
-      });
+      await handleMockAPIResponse(route);
     });
 
     // Mock RSS API
