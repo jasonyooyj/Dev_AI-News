@@ -1,190 +1,151 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { NewsItem, ProcessedNews, Source, QuickSummary } from '@/types/news';
-import {
-  getNewsItems,
-  saveNewsItems,
-  addNewsItem as addNewsItemToStorage,
-  updateNewsItem as updateNewsItemInStorage,
-  deleteNewsItem as deleteNewsItemFromStorage,
-  getProcessedNews,
-  addProcessedNews as addProcessedNewsToStorage,
-  getProcessedNewsByNewsId,
-} from '@/lib/storage';
-import { v4 as uuidv4 } from 'uuid';
+import { useCallback } from 'react';
+import { toast } from 'sonner';
+import { useNewsStore, useSourcesStore } from '@/store';
+import { useSummarize, useFetchRss, useScrapeUrl } from './queries';
+import { NewsItem, Source } from '@/types/news';
 
+/**
+ * useNews - Migrated to use Zustand store + TanStack Query
+ *
+ * State from Zustand store (auto-persisted to localStorage)
+ * Mutations from TanStack Query (with toast notifications)
+ */
 export function useNews() {
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [processedNews, setProcessedNews] = useState<ProcessedNews[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
-  const [summarizingIds, setSummarizingIds] = useState<string[]>([]);
+  // Zustand store state
+  const newsItems = useNewsStore((s) => s.newsItems);
+  const addNewsItemToStore = useNewsStore((s) => s.addNewsItem);
+  const updateNewsItemInStore = useNewsStore((s) => s.updateNewsItem);
+  const deleteNewsItemFromStore = useNewsStore((s) => s.deleteNewsItem);
 
-  useEffect(() => {
-    setNewsItems(getNewsItems());
-    setProcessedNews(getProcessedNews());
-    setIsLoading(false);
-  }, []);
+  // TanStack Query mutations
+  const summarizeMutation = useSummarize();
+  const fetchRssMutation = useFetchRss();
+  const scrapeUrlMutation = useScrapeUrl();
 
-  const addNewsItem = useCallback((data: Omit<NewsItem, 'id' | 'createdAt' | 'isProcessed'>) => {
-    const newItem: NewsItem = {
-      ...data,
-      id: uuidv4(),
-      createdAt: new Date().toISOString(),
-      isProcessed: false,
-    };
-    addNewsItemToStorage(newItem);
-    setNewsItems(getNewsItems());
-    return newItem;
-  }, []);
+  // Loading states
+  const isLoading = false; // Zustand hydrates synchronously
+  const isFetching = fetchRssMutation.isPending || scrapeUrlMutation.isPending;
+  const summarizingIds = summarizeMutation.isPending
+    ? [summarizeMutation.variables?.newsId].filter(Boolean) as string[]
+    : [];
 
-  const updateNewsItem = useCallback((id: string, updates: Partial<NewsItem>) => {
-    updateNewsItemInStorage(id, updates);
-    setNewsItems(getNewsItems());
-  }, []);
+  // Add news item
+  const addNewsItem = useCallback(
+    (data: Omit<NewsItem, 'id' | 'createdAt' | 'isProcessed'>) => {
+      addNewsItemToStore({
+        ...data,
+        isProcessed: false,
+      });
+    },
+    [addNewsItemToStore]
+  );
 
-  const deleteNewsItem = useCallback((id: string) => {
-    deleteNewsItemFromStorage(id);
-    setNewsItems(getNewsItems());
-  }, []);
+  // Update news item
+  const updateNewsItem = useCallback(
+    (id: string, updates: Partial<NewsItem>) => {
+      updateNewsItemInStore(id, updates);
+    },
+    [updateNewsItemInStore]
+  );
 
-  // 개별 뉴스 아이템에 대한 요약 생성
-  const generateSummary = useCallback(async (newsItem: NewsItem): Promise<NewsItem | null> => {
-    if (newsItem.quickSummary) return newsItem;
+  // Delete news item
+  const deleteNewsItem = useCallback(
+    (id: string) => {
+      deleteNewsItemFromStore(id);
+      toast.success('News deleted');
+    },
+    [deleteNewsItemFromStore]
+  );
 
-    setSummarizingIds((prev) => [...prev, newsItem.id]);
-    try {
-      const response = await fetch('/api/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'summarize',
+  // Generate summary for a news item
+  const generateSummary = useCallback(
+    async (newsItem: NewsItem) => {
+      if (newsItem.quickSummary) return newsItem;
+
+      try {
+        await summarizeMutation.mutateAsync({
+          newsId: newsItem.id,
           title: newsItem.title,
           content: newsItem.originalContent,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate summary');
+        });
+        // Return updated item from store
+        return useNewsStore.getState().newsItems.find((n) => n.id === newsItem.id) || null;
+      } catch {
+        return null;
       }
+    },
+    [summarizeMutation]
+  );
 
-      const data = await response.json();
-      const summary: QuickSummary = {
-        bullets: data.bullets || [],
-        category: data.category || 'other',
-        createdAt: new Date().toISOString(),
-      };
-
-      updateNewsItemInStorage(newsItem.id, { quickSummary: summary });
-      setNewsItems(getNewsItems());
-      return { ...newsItem, quickSummary: summary };
-    } catch (error) {
-      console.error('Error generating summary:', error);
-      return null;
-    } finally {
-      setSummarizingIds((prev) => prev.filter((id) => id !== newsItem.id));
-    }
-  }, []);
-
-  // 여러 뉴스 아이템에 대한 요약 일괄 생성
-  const generateSummariesForItems = useCallback(async (items: NewsItem[]): Promise<void> => {
-    for (const item of items) {
-      await generateSummary(item);
-    }
-  }, [generateSummary]);
-
-  const fetchFromRss = useCallback(async (source: Source, autoSummarize = true) => {
-    if (!source.rssUrl) return [];
-
-    setIsFetching(true);
-    try {
-      const response = await fetch('/api/rss', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: source.rssUrl }),
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch RSS');
-
-      const data = await response.json();
-      const newItems: NewsItem[] = [];
-
-      for (const item of data.items || []) {
-        const exists = newsItems.some((n) => n.url === item.link);
-        if (!exists) {
-          const newsItem = addNewsItem({
-            sourceId: source.id,
-            title: item.title || 'Untitled',
-            originalContent: item.contentSnippet || item.content || '',
-            url: item.link || '',
-            publishedAt: item.pubDate,
-          });
-          newItems.push(newsItem);
+  // Generate summaries for multiple items
+  const generateSummariesForItems = useCallback(
+    async (items: NewsItem[]) => {
+      for (const item of items) {
+        if (!item.quickSummary) {
+          await generateSummary(item);
         }
       }
+    },
+    [generateSummary]
+  );
 
-      // 자동 요약 생성
-      if (autoSummarize && newItems.length > 0) {
-        generateSummariesForItems(newItems);
+  // Fetch from RSS
+  const fetchFromRss = useCallback(
+    async (source: Source, autoSummarize = true) => {
+      if (!source.rssUrl) return [];
+
+      try {
+        await fetchRssMutation.mutateAsync({ source });
+
+        // If auto summarize, run summaries for new items
+        if (autoSummarize) {
+          const items = useNewsStore.getState().newsItems.filter(
+            (n) => n.sourceId === source.id && !n.quickSummary
+          );
+          // Don't await - run in background
+          generateSummariesForItems(items);
+        }
+
+        return useNewsStore.getState().newsItems.filter((n) => n.sourceId === source.id);
+      } catch {
+        return [];
       }
+    },
+    [fetchRssMutation, generateSummariesForItems]
+  );
 
-      return newItems;
-    } catch (error) {
-      console.error('Error fetching RSS:', error);
-      return [];
-    } finally {
-      setIsFetching(false);
-    }
-  }, [newsItems, addNewsItem, generateSummariesForItems]);
+  // Scrape URL
+  const scrapeUrl = useCallback(
+    async (url: string, sourceId: string, autoSummarize = true) => {
+      try {
+        await scrapeUrlMutation.mutateAsync(url);
 
-  const scrapeUrl = useCallback(async (url: string, sourceId: string, autoSummarize = true) => {
-    setIsFetching(true);
-    try {
-      const response = await fetch('/api/scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
+        if (autoSummarize) {
+          const items = useNewsStore.getState().newsItems;
+          const newItem = items.find((n) => n.url === url);
+          if (newItem && !newItem.quickSummary) {
+            generateSummary(newItem);
+          }
+        }
 
-      if (!response.ok) throw new Error('Failed to scrape URL');
-
-      const data = await response.json();
-
-      const newsItem = addNewsItem({
-        sourceId,
-        title: data.title || 'Untitled',
-        originalContent: data.content || '',
-        url,
-        publishedAt: new Date().toISOString(),
-      });
-
-      // 자동 요약 생성
-      if (autoSummarize) {
-        generateSummary(newsItem);
+        return useNewsStore.getState().newsItems.find((n) => n.url === url) || null;
+      } catch {
+        return null;
       }
+    },
+    [scrapeUrlMutation, generateSummary]
+  );
 
-      return newsItem;
-    } catch (error) {
-      console.error('Error scraping URL:', error);
-      return null;
-    } finally {
-      setIsFetching(false);
-    }
-  }, [addNewsItem, generateSummary]);
-
+  // Refresh news (no-op with Zustand - state is always fresh)
   const refreshNews = useCallback(() => {
-    setNewsItems(getNewsItems());
-    setProcessedNews(getProcessedNews());
-  }, []);
-
-  const getProcessedForNews = useCallback((newsItemId: string) => {
-    return getProcessedNewsByNewsId(newsItemId);
+    // Zustand state is reactive, no refresh needed
   }, []);
 
   return {
     newsItems,
-    processedNews,
+    processedNews: [], // Deprecated - use generatedContents in NewsDetail
     isLoading,
     isFetching,
     summarizingIds,
@@ -194,8 +155,9 @@ export function useNews() {
     fetchFromRss,
     scrapeUrl,
     refreshNews,
-    getProcessedForNews,
     generateSummary,
     generateSummariesForItems,
+    // Expose mutation states for UI
+    isSummarizing: summarizeMutation.isPending,
   };
 }

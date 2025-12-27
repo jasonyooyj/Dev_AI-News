@@ -1,72 +1,44 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useAIProviderStore } from '@/store';
+import { useProviderStatus } from './queries';
 
 export type AIProvider = 'openai' | 'deepseek';
 
-interface ProviderStatus {
-  providers: {
-    openai: boolean;
-    deepseek: boolean;
-  };
-  defaultProvider: AIProvider | null;
-  models: {
-    openai: string;
-    deepseek: string;
-  };
-}
-
-const STORAGE_KEY = 'ai-provider-preference';
-
+/**
+ * useAIProvider - Migrated to use Zustand store + TanStack Query
+ *
+ * Provider preference is persisted via Zustand
+ * Provider status is fetched via TanStack Query with caching
+ */
 export function useAIProvider() {
-  const [status, setStatus] = useState<ProviderStatus | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Zustand store state
+  const selectedProvider = useAIProviderStore((s) => s.provider);
+  const setProvider = useAIProviderStore((s) => s.setProvider);
 
-  // Fetch available providers from the API
-  const fetchProviders = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await fetch('/api/openai');
-      if (!response.ok) {
-        throw new Error('Failed to fetch provider status');
+  // TanStack Query for provider status
+  const {
+    data: status,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useProviderStatus();
+
+  // Error state
+  const error = queryError?.message || null;
+
+  // Change provider (with validation)
+  const changeProvider = useCallback(
+    (provider: AIProvider) => {
+      if (status?.providers[provider]) {
+        setProvider(provider);
       }
-      const data: ProviderStatus = await response.json();
-      setStatus(data);
+    },
+    [status, setProvider]
+  );
 
-      // Load saved preference or use default
-      const savedProvider = localStorage.getItem(STORAGE_KEY) as AIProvider | null;
-      if (savedProvider && data.providers[savedProvider]) {
-        setSelectedProvider(savedProvider);
-      } else if (data.defaultProvider) {
-        setSelectedProvider(data.defaultProvider);
-      } else if (data.providers.openai) {
-        setSelectedProvider('openai');
-      } else if (data.providers.deepseek) {
-        setSelectedProvider('deepseek');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProviders();
-  }, [fetchProviders]);
-
-  // Change the selected provider
-  const changeProvider = useCallback((provider: AIProvider) => {
-    if (status?.providers[provider]) {
-      setSelectedProvider(provider);
-      localStorage.setItem(STORAGE_KEY, provider);
-    }
-  }, [status]);
-
-  // Get the current model name
+  // Get current model name
   const getCurrentModel = useCallback(() => {
     if (!selectedProvider || !status) return null;
     return status.models[selectedProvider];
@@ -81,14 +53,23 @@ export function useAIProvider() {
     return available;
   }, [status]);
 
+  // Memoized current model
+  const currentModel = useMemo(() => getCurrentModel(), [getCurrentModel]);
+
+  // Memoized available providers
+  const availableProviders = useMemo(() => getAvailableProviders(), [getAvailableProviders]);
+
   return {
-    status,
+    status: status || null,
     selectedProvider,
     isLoading,
     error,
     changeProvider,
     getCurrentModel,
     getAvailableProviders,
-    refetch: fetchProviders,
+    refetch,
+    // Convenience values
+    currentModel,
+    availableProviders,
   };
 }

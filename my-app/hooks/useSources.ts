@@ -1,49 +1,76 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
+import { useSourcesStore } from '@/store';
 import { Source } from '@/types/news';
-import { getSources, saveSources, addSource as addSourceToStorage, updateSource as updateSourceInStorage, deleteSource as deleteSourceFromStorage } from '@/lib/storage';
-import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * useSources - Migrated to use Zustand store
+ *
+ * State is auto-persisted to localStorage via Zustand persist middleware
+ */
 export function useSources() {
-  const [sources, setSources] = useState<Source[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Zustand store state and actions
+  const sources = useSourcesStore((s) => s.sources);
+  const addSourceToStore = useSourcesStore((s) => s.addSource);
+  const updateSourceInStore = useSourcesStore((s) => s.updateSource);
+  const deleteSourceFromStore = useSourcesStore((s) => s.deleteSource);
+  const initDefaults = useSourcesStore((s) => s.initDefaults);
 
+  // Initialize default sources on mount if empty
   useEffect(() => {
-    setSources(getSources());
-    setIsLoading(false);
-  }, []);
+    initDefaults();
+  }, [initDefaults]);
 
-  const addSource = useCallback((data: Omit<Source, 'id'>) => {
-    const newSource: Source = {
-      ...data,
-      id: uuidv4(),
-    };
-    addSourceToStorage(newSource);
-    setSources(getSources());
-    return newSource;
-  }, []);
+  // Loading state - Zustand hydrates synchronously
+  const isLoading = false;
 
-  const updateSource = useCallback((id: string, updates: Partial<Source>) => {
-    updateSourceInStorage(id, updates);
-    setSources(getSources());
-  }, []);
+  // Add source
+  const addSource = useCallback(
+    (data: Omit<Source, 'id'>) => {
+      addSourceToStore(data);
+      toast.success(`Source "${data.name}" added`);
+    },
+    [addSourceToStore]
+  );
 
-  const deleteSource = useCallback((id: string) => {
-    deleteSourceFromStorage(id);
-    setSources(getSources());
-  }, []);
+  // Update source
+  const updateSource = useCallback(
+    (id: string, updates: Partial<Source>) => {
+      updateSourceInStore(id, updates);
+      toast.success('Source updated');
+    },
+    [updateSourceInStore]
+  );
 
-  const toggleSource = useCallback((id: string) => {
-    const source = sources.find((s) => s.id === id);
-    if (source) {
-      updateSourceInStorage(id, { isActive: !source.isActive });
-      setSources(getSources());
-    }
-  }, [sources]);
+  // Delete source
+  const deleteSource = useCallback(
+    (id: string) => {
+      const source = sources.find((s) => s.id === id);
+      deleteSourceFromStore(id);
+      toast.success(`Source "${source?.name || ''}" deleted`);
+    },
+    [sources, deleteSourceFromStore]
+  );
 
+  // Toggle source active state
+  const toggleSource = useCallback(
+    (id: string) => {
+      const source = sources.find((s) => s.id === id);
+      if (source) {
+        updateSourceInStore(id, { isActive: !source.isActive });
+        toast.success(
+          source.isActive ? `Source "${source.name}" disabled` : `Source "${source.name}" enabled`
+        );
+      }
+    },
+    [sources, updateSourceInStore]
+  );
+
+  // Refresh sources (no-op with Zustand - state is always fresh)
   const refreshSources = useCallback(() => {
-    setSources(getSources());
+    // Zustand state is reactive, no refresh needed
   }, []);
 
   return {

@@ -1,153 +1,122 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { NewsItem, QuickSummary, PlatformContent, Platform, StyleTemplate } from '@/types/news';
-import { updateNewsItem } from '@/lib/storage';
-import { AIProvider } from './useAIProvider';
+import { useCallback } from 'react';
+import { NewsItem, Platform, StyleTemplate } from '@/types/news';
+import { useNewsStore } from '@/store';
+import { useSummarize, useGenerateContent, useRegenerateContent } from './queries';
 
-const PROVIDER_STORAGE_KEY = 'ai-provider-preference';
-
-function getSelectedProvider(): AIProvider | undefined {
-  if (typeof window === 'undefined') return undefined;
-  return (localStorage.getItem(PROVIDER_STORAGE_KEY) as AIProvider) || undefined;
-}
-
+/**
+ * useOpenAI - Migrated to use TanStack Query mutations
+ *
+ * All API calls now go through TanStack Query with:
+ * - Automatic error handling with toast notifications
+ * - Loading state management
+ * - Provider selection from Zustand store
+ */
 export function useOpenAI() {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // TanStack Query mutations
+  const summarizeMutation = useSummarize();
+  const generateMutation = useGenerateContent();
+  const regenerateMutation = useRegenerateContent();
 
-  // 3줄 핵심 요약 생성 (뉴스 수집 시 호출)
-  const generateQuickSummary = useCallback(async (
-    title: string,
-    content: string
-  ): Promise<QuickSummary | null> => {
-    try {
-      const provider = getSelectedProvider();
-      const response = await fetch('/api/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'summarize',
+  // Combined loading state
+  const isProcessing =
+    summarizeMutation.isPending ||
+    generateMutation.isPending ||
+    regenerateMutation.isPending;
+
+  // Combined error state
+  const error =
+    summarizeMutation.error?.message ||
+    generateMutation.error?.message ||
+    regenerateMutation.error?.message ||
+    null;
+
+  // Generate quick summary (3-bullet summary for news collection)
+  const generateQuickSummary = useCallback(
+    async (title: string, content: string) => {
+      try {
+        const result = await summarizeMutation.mutateAsync({
+          newsId: '', // No newsId when called directly
           title,
           content,
-          provider,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate summary');
+        });
+        return {
+          bullets: result.result.bullets || [],
+          category: result.result.category || 'other',
+          createdAt: new Date().toISOString(),
+        };
+      } catch {
+        return null;
       }
+    },
+    [summarizeMutation]
+  );
 
-      const data = await response.json();
-      return {
-        bullets: data.bullets || [],
-        category: data.category || 'other',
-        createdAt: new Date().toISOString(),
-      };
-    } catch (err) {
-      console.error('Error generating summary:', err);
-      return null;
-    }
-  }, []);
-
-  // 특정 플랫폼용 콘텐츠 생성 (문체 템플릿 적용)
-  const generatePlatformContent = useCallback(async (
-    newsItem: NewsItem,
-    platform: Platform,
-    styleTemplate?: StyleTemplate | null
-  ): Promise<PlatformContent | null> => {
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const provider = getSelectedProvider();
-      const response = await fetch('/api/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'generate',
+  // Generate platform-specific content (with style template)
+  const generatePlatformContent = useCallback(
+    async (
+      newsItem: NewsItem,
+      platform: Platform,
+      styleTemplate?: StyleTemplate | null
+    ) => {
+      try {
+        const result = await generateMutation.mutateAsync({
           title: newsItem.title,
           content: newsItem.originalContent,
-          url: newsItem.url,
           platform,
-          provider,
-          styleTemplate: styleTemplate ? {
-            tone: styleTemplate.tone,
-            characteristics: styleTemplate.characteristics,
-            examples: styleTemplate.examples,
-          } : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate content');
+          url: newsItem.url,
+          styleTemplate: styleTemplate || undefined,
+        });
+        return {
+          content: result.content,
+          charCount: result.charCount,
+          hashtags: result.hashtags,
+        };
+      } catch {
+        return null;
       }
+    },
+    [generateMutation]
+  );
 
-      const data = await response.json();
-      return {
-        content: data.content,
-        charCount: data.charCount,
-        hashtags: data.hashtags,
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(message);
-      return null;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
-
-  // 피드백 반영하여 콘텐츠 재생성
-  const regenerateWithFeedback = useCallback(async (
-    previousContent: string,
-    feedback: string,
-    platform: Platform
-  ): Promise<PlatformContent | null> => {
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const provider = getSelectedProvider();
-      const response = await fetch('/api/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'regenerate',
+  // Regenerate content with feedback
+  const regenerateWithFeedback = useCallback(
+    async (previousContent: string, feedback: string, platform: Platform) => {
+      try {
+        const result = await regenerateMutation.mutateAsync({
           previousContent,
           feedback,
           platform,
-          provider,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to regenerate content');
+        });
+        return {
+          content: result.content,
+          charCount: result.charCount,
+        };
+      } catch {
+        return null;
       }
+    },
+    [regenerateMutation]
+  );
 
-      const data = await response.json();
-      return {
-        content: data.content,
-        charCount: data.charCount,
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(message);
-      return null;
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
-
-  // 뉴스 아이템에 요약 추가
-  const addSummaryToNewsItem = useCallback(async (newsItem: NewsItem): Promise<NewsItem | null> => {
-    const summary = await generateQuickSummary(newsItem.title, newsItem.originalContent);
-    if (!summary) return null;
-
-    updateNewsItem(newsItem.id, { quickSummary: summary });
-    return { ...newsItem, quickSummary: summary };
-  }, [generateQuickSummary]);
+  // Add summary to news item
+  const addSummaryToNewsItem = useCallback(
+    async (newsItem: NewsItem) => {
+      try {
+        await summarizeMutation.mutateAsync({
+          newsId: newsItem.id,
+          title: newsItem.title,
+          content: newsItem.originalContent,
+        });
+        // Return updated item from store
+        return useNewsStore.getState().newsItems.find((n) => n.id === newsItem.id) || null;
+      } catch {
+        return null;
+      }
+    },
+    [summarizeMutation]
+  );
 
   return {
     isProcessing,
@@ -156,5 +125,9 @@ export function useOpenAI() {
     generatePlatformContent,
     regenerateWithFeedback,
     addSummaryToNewsItem,
+    // Expose mutation states for more granular control
+    isSummarizing: summarizeMutation.isPending,
+    isGenerating: generateMutation.isPending,
+    isRegenerating: regenerateMutation.isPending,
   };
 }

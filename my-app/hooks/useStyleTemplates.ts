@@ -1,131 +1,137 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { toast } from 'sonner';
 import { StyleTemplate, Platform } from '@/types/news';
-import {
-  getStyleTemplates,
-  getStyleTemplatesByPlatform,
-  getDefaultStyleTemplate,
-  addStyleTemplate as addStyleTemplateToStorage,
-  updateStyleTemplate as updateStyleTemplateInStorage,
-  deleteStyleTemplate as deleteStyleTemplateFromStorage,
-  setDefaultStyleTemplate as setDefaultInStorage,
-} from '@/lib/storage';
-import { v4 as uuidv4 } from 'uuid';
-import { AIProvider } from './useAIProvider';
+import { useStyleTemplatesStore } from '@/store';
+import { useAnalyzeStyle } from './queries';
 
-const PROVIDER_STORAGE_KEY = 'ai-provider-preference';
-
-function getSelectedProvider(): AIProvider | undefined {
-  if (typeof window === 'undefined') return undefined;
-  return (localStorage.getItem(PROVIDER_STORAGE_KEY) as AIProvider) || undefined;
-}
-
+/**
+ * useStyleTemplates - Migrated to use Zustand store + TanStack Query
+ *
+ * State is auto-persisted to localStorage via Zustand persist middleware
+ * AI analysis uses TanStack Query mutations
+ */
 export function useStyleTemplates() {
-  const [templates, setTemplates] = useState<StyleTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  // Zustand store state and actions
+  const templates = useStyleTemplatesStore((s) => s.templates);
+  const addTemplateToStore = useStyleTemplatesStore((s) => s.addTemplate);
+  const updateTemplateInStore = useStyleTemplatesStore((s) => s.updateTemplate);
+  const deleteTemplateFromStore = useStyleTemplatesStore((s) => s.deleteTemplate);
+  const setDefaultInStore = useStyleTemplatesStore((s) => s.setDefault);
+  const getByPlatformFromStore = useStyleTemplatesStore((s) => s.getByPlatform);
+  const getDefaultFromStore = useStyleTemplatesStore((s) => s.getDefault);
 
-  useEffect(() => {
-    setTemplates(getStyleTemplates());
-    setIsLoading(false);
-  }, []);
+  // TanStack Query mutation for style analysis
+  const analyzeStyleMutation = useAnalyzeStyle();
 
-  const refreshTemplates = useCallback(() => {
-    setTemplates(getStyleTemplates());
-  }, []);
+  // Loading states - Zustand hydrates synchronously
+  const isLoading = false;
+  const isAnalyzing = analyzeStyleMutation.isPending;
 
-  const getByPlatform = useCallback((platform: Platform) => {
-    return templates.filter((t) => t.platform === platform);
-  }, [templates]);
+  // Get templates by platform
+  const getByPlatform = useCallback(
+    (platform: Platform) => {
+      return templates.filter((t) => t.platform === platform);
+    },
+    [templates]
+  );
 
-  const getDefault = useCallback((platform: Platform) => {
-    return templates.find((t) => t.platform === platform && t.isDefault);
-  }, [templates]);
+  // Get default template for platform
+  const getDefault = useCallback(
+    (platform: Platform) => {
+      return templates.find((t) => t.platform === platform && t.isDefault);
+    },
+    [templates]
+  );
 
-  const addTemplate = useCallback((data: Omit<StyleTemplate, 'id' | 'createdAt' | 'updatedAt' | 'isDefault'>) => {
-    const now = new Date().toISOString();
-    const newTemplate: StyleTemplate = {
-      ...data,
-      id: uuidv4(),
-      isDefault: false,
-      createdAt: now,
-      updatedAt: now,
-    };
-    addStyleTemplateToStorage(newTemplate);
-    refreshTemplates();
-    return newTemplate;
-  }, [refreshTemplates]);
+  // Add template
+  const addTemplate = useCallback(
+    (data: Omit<StyleTemplate, 'id' | 'createdAt' | 'updatedAt' | 'isDefault'>) => {
+      // Store handles isDefault automatically (first template for platform becomes default)
+      addTemplateToStore({ ...data, isDefault: false });
+      toast.success(`Template "${data.name}" created`);
+      // Return the newly created template
+      const newTemplates = useStyleTemplatesStore.getState().templates;
+      return newTemplates.find((t) => t.name === data.name) || null;
+    },
+    [addTemplateToStore]
+  );
 
-  const updateTemplate = useCallback((id: string, updates: Partial<StyleTemplate>) => {
-    updateStyleTemplateInStorage(id, updates);
-    refreshTemplates();
-  }, [refreshTemplates]);
+  // Update template
+  const updateTemplate = useCallback(
+    (id: string, updates: Partial<StyleTemplate>) => {
+      updateTemplateInStore(id, updates);
+      toast.success('Template updated');
+    },
+    [updateTemplateInStore]
+  );
 
-  const deleteTemplate = useCallback((id: string) => {
-    deleteStyleTemplateFromStorage(id);
-    refreshTemplates();
-  }, [refreshTemplates]);
+  // Delete template
+  const deleteTemplate = useCallback(
+    (id: string) => {
+      const template = templates.find((t) => t.id === id);
+      deleteTemplateFromStore(id);
+      toast.success(`Template "${template?.name || ''}" deleted`);
+    },
+    [templates, deleteTemplateFromStore]
+  );
 
-  const setDefault = useCallback((platform: Platform, id: string) => {
-    setDefaultInStorage(platform, id);
-    refreshTemplates();
-  }, [refreshTemplates]);
+  // Set default template for platform
+  const setDefault = useCallback(
+    (platform: Platform, id: string) => {
+      setDefaultInStore(platform, id);
+      toast.success('Default template set');
+    },
+    [setDefaultInStore]
+  );
 
-  // AI로 예시 텍스트 분석하여 스타일 추출
-  const analyzeExamples = useCallback(async (examples: string[]): Promise<{
-    tone: string;
-    characteristics: string[];
-  } | null> => {
-    if (examples.length === 0) return null;
+  // Analyze examples to extract style
+  const analyzeExamples = useCallback(
+    async (examples: string[]): Promise<{
+      tone: string;
+      characteristics: string[];
+    } | null> => {
+      if (examples.length === 0) return null;
 
-    setIsAnalyzing(true);
-    try {
-      const provider = getSelectedProvider();
-      const response = await fetch('/api/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'analyze-style',
-          examples,
-          provider,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze style');
+      try {
+        const result = await analyzeStyleMutation.mutateAsync(examples);
+        return {
+          tone: result.tone || '',
+          characteristics: result.characteristics || [],
+        };
+      } catch {
+        return null;
       }
+    },
+    [analyzeStyleMutation]
+  );
 
-      const data = await response.json();
-      return {
-        tone: data.tone || '',
-        characteristics: data.characteristics || [],
-      };
-    } catch (error) {
-      console.error('Error analyzing style:', error);
-      return null;
-    } finally {
-      setIsAnalyzing(false);
-    }
+  // Create template from examples (analyze + create)
+  const createTemplateFromExamples = useCallback(
+    async (
+      platform: Platform,
+      name: string,
+      examples: string[]
+    ): Promise<StyleTemplate | null> => {
+      const analysis = await analyzeExamples(examples);
+      if (!analysis) return null;
+
+      return addTemplate({
+        platform,
+        name,
+        examples,
+        tone: analysis.tone,
+        characteristics: analysis.characteristics,
+      });
+    },
+    [analyzeExamples, addTemplate]
+  );
+
+  // Refresh templates (no-op with Zustand - state is always fresh)
+  const refreshTemplates = useCallback(() => {
+    // Zustand state is reactive, no refresh needed
   }, []);
-
-  // 예시 분석 후 새 템플릿 생성
-  const createTemplateFromExamples = useCallback(async (
-    platform: Platform,
-    name: string,
-    examples: string[]
-  ): Promise<StyleTemplate | null> => {
-    const analysis = await analyzeExamples(examples);
-    if (!analysis) return null;
-
-    return addTemplate({
-      platform,
-      name,
-      examples,
-      tone: analysis.tone,
-      characteristics: analysis.characteristics,
-    });
-  }, [analyzeExamples, addTemplate]);
 
   return {
     templates,
