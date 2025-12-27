@@ -10,6 +10,7 @@ import {
   ListChecks,
   ChevronDown,
   Check,
+  Bookmark,
 } from 'lucide-react';
 import { Modal, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -82,6 +83,7 @@ interface NewsDetailProps {
   source?: Source;
   onGenerateContent: (platform: Platform, styleTemplateId?: string) => Promise<PlatformContent | null>;
   onRegenerateWithFeedback: (platform: Platform, feedback: string) => Promise<PlatformContent | null>;
+  onBookmark?: (news: NewsItem) => void;
   styleTemplates: StyleTemplate[];
   isGenerating: boolean;
   generatedContents: Partial<Record<Platform, PlatformContent>>;
@@ -441,6 +443,7 @@ export function NewsDetail({
   source,
   onGenerateContent,
   onRegenerateWithFeedback,
+  onBookmark,
   styleTemplates,
   isGenerating,
   generatedContents,
@@ -450,6 +453,7 @@ export function NewsDetail({
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Partial<Record<Platform, string>>>({});
 
   const platforms = Object.keys(PLATFORM_CONFIGS) as Platform[];
+  const isBookmarked = news?.isBookmarked ?? false;
 
   if (!news) return null;
 
@@ -565,6 +569,17 @@ export function NewsDetail({
       <ModalFooter>
         <Button variant="ghost" onClick={onClose}>
           Close
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => onBookmark?.(news)}
+          className={isBookmarked
+            ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+            : "text-zinc-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+          }
+          leftIcon={<Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />}
+        >
+          {isBookmarked ? 'Bookmarked' : 'Bookmark'}
         </Button>
         <Button
           variant="secondary"

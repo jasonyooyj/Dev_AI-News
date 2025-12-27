@@ -31,7 +31,7 @@ interface ScrapeResult {
 
 export default function DashboardPage() {
   const { sources, isLoading: sourcesLoading } = useSources();
-  const { newsItems, isLoading: newsLoading, fetchFromRss, scrapeUrl, deleteNewsItem, refreshNews, addNewsItem } = useNews();
+  const { newsItems, isLoading: newsLoading, fetchFromRss, scrapeUrl, deleteNewsItem, toggleBookmark, refreshNews, addNewsItem } = useNews();
   const { isProcessing, generatePlatformContent, regenerateWithFeedback, addSummaryToNewsItem } = useOpenAI();
   const { templates: styleTemplates } = useStyleTemplates();
 
@@ -133,6 +133,10 @@ export default function DashboardPage() {
     }
   };
 
+  const handleBookmarkNews = (newsItem: NewsItem) => {
+    toggleBookmark(newsItem.id);
+  };
+
   const handleCloseNewsDetail = () => {
     setSelectedNews(null);
     setGeneratedContents({});
@@ -222,7 +226,7 @@ export default function DashboardPage() {
     <MainLayout>
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">{newsItems.length}</div>
@@ -243,6 +247,14 @@ export default function DashboardPage() {
                 {newsItems.filter((n) => !n.quickSummary || n.quickSummary.bullets.length === 0).length}
               </div>
               <div className="text-sm text-muted-foreground">Pending</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-amber-500">
+                {newsItems.filter((n) => n.isBookmarked).length}
+              </div>
+              <div className="text-sm text-muted-foreground">Bookmarked</div>
             </CardContent>
           </Card>
           <Card>
@@ -276,6 +288,7 @@ export default function DashboardPage() {
             sources={sources}
             onView={handleViewNews}
             onDelete={handleDeleteNews}
+            onBookmark={handleBookmarkNews}
             summarizingIds={summarizingIds}
           />
         ) : (
@@ -300,6 +313,7 @@ export default function DashboardPage() {
           onClose={handleCloseNewsDetail}
           onGenerateContent={handleGenerateContent}
           onRegenerateWithFeedback={handleRegenerateWithFeedback}
+          onBookmark={handleBookmarkNews}
           styleTemplates={styleTemplates}
           isGenerating={isGeneratingContent}
           generatedContents={generatedContents}

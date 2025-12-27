@@ -8,6 +8,7 @@ import {
   List,
   ChevronDown,
   Newspaper,
+  Bookmark,
 } from 'lucide-react';
 import { NewsCard } from './NewsCard';
 import { Input } from '@/components/ui/Input';
@@ -17,7 +18,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { NewsItem, Source } from '@/types/news';
 
 type ViewMode = 'grid' | 'list';
-type FilterStatus = 'all' | 'summarized' | 'pending';
+type FilterStatus = 'all' | 'summarized' | 'pending' | 'bookmarked';
 
 interface NewsListProps {
   news: NewsItem[];
@@ -25,6 +26,7 @@ interface NewsListProps {
   isLoading?: boolean;
   onView?: (news: NewsItem) => void;
   onDelete?: (news: NewsItem) => void;
+  onBookmark?: (news: NewsItem) => void;
   summarizingIds?: string[];
 }
 
@@ -34,6 +36,7 @@ export function NewsList({
   isLoading = false,
   onView,
   onDelete,
+  onBookmark,
   summarizingIds = [],
 }: NewsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,6 +69,7 @@ export function NewsList({
       const hasSummary = item.quickSummary && item.quickSummary.bullets.length > 0;
       if (filterStatus === 'summarized' && !hasSummary) return false;
       if (filterStatus === 'pending' && hasSummary) return false;
+      if (filterStatus === 'bookmarked' && !item.isBookmarked) return false;
 
       // Source filter
       if (filterSourceId !== 'all' && item.sourceId !== filterSourceId) return false;
@@ -76,10 +80,12 @@ export function NewsList({
 
   const stats = useMemo(() => {
     const summarized = news.filter((n) => n.quickSummary && n.quickSummary.bullets.length > 0).length;
+    const bookmarked = news.filter((n) => n.isBookmarked).length;
     return {
       total: news.length,
       summarized,
       pending: news.length - summarized,
+      bookmarked,
     };
   }, [news]);
 
@@ -158,18 +164,21 @@ export function NewsList({
             <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Status
             </label>
-            <div className="flex items-center gap-1">
-              {(['all', 'summarized', 'pending'] as FilterStatus[]).map(
+            <div className="flex items-center gap-1 flex-wrap">
+              {(['all', 'summarized', 'pending', 'bookmarked'] as FilterStatus[]).map(
                 (status) => (
                   <button
                     key={status}
                     onClick={() => setFilterStatus(status)}
-                    className={`px-3 py-1.5 text-sm rounded-lg capitalize transition-colors ${
+                    className={`px-3 py-1.5 text-sm rounded-lg capitalize transition-colors flex items-center gap-1.5 ${
                       filterStatus === status
-                        ? 'bg-blue-600 text-white'
+                        ? status === 'bookmarked'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-blue-600 text-white'
                         : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700'
                     }`}
                   >
+                    {status === 'bookmarked' && <Bookmark className="w-3.5 h-3.5" />}
                     {status}
                   </button>
                 )
@@ -198,7 +207,7 @@ export function NewsList({
       )}
 
       {/* Stats */}
-      <div className="flex items-center gap-4 text-sm">
+      <div className="flex items-center gap-4 text-sm flex-wrap">
         <span className="text-zinc-600 dark:text-zinc-400">
           Showing{' '}
           <span className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -206,13 +215,19 @@ export function NewsList({
           </span>{' '}
           of {stats.total} news
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="success" size="sm">
             {stats.summarized} summarized
           </Badge>
           <Badge variant="warning" size="sm">
             {stats.pending} pending
           </Badge>
+          {stats.bookmarked > 0 && (
+            <Badge variant="default" size="sm" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <Bookmark className="w-3 h-3 mr-1 fill-current" />
+              {stats.bookmarked} bookmarked
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -248,6 +263,7 @@ export function NewsList({
               source={sourceMap[item.sourceId]}
               onView={onView}
               onDelete={onDelete}
+              onBookmark={onBookmark}
               isSummarizing={summarizingIds.includes(item.id)}
             />
           ))}

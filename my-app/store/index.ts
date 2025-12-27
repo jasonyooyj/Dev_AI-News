@@ -12,6 +12,7 @@ interface NewsState {
   deleteNewsItem: (id: string) => void;
   setNewsItems: (items: NewsItem[]) => void;
   addSummary: (id: string, summary: QuickSummary) => void;
+  toggleBookmark: (id: string) => void;
 }
 
 export const useNewsStore = create<NewsState>()(
@@ -53,6 +54,14 @@ export const useNewsStore = create<NewsState>()(
         set((state) => ({
           newsItems: state.newsItems.map((item) =>
             item.id === id ? { ...item, quickSummary: summary } : item
+          ),
+        }));
+      },
+
+      toggleBookmark: (id) => {
+        set((state) => ({
+          newsItems: state.newsItems.map((item) =>
+            item.id === id ? { ...item, isBookmarked: !item.isBookmarked } : item
           ),
         }));
       },

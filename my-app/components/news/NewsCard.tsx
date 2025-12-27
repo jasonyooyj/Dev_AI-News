@@ -6,6 +6,7 @@ import {
   Trash2,
   Clock,
   Eye,
+  Bookmark,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +20,7 @@ interface NewsCardProps {
   source?: Source;
   onView?: (news: NewsItem) => void;
   onDelete?: (news: NewsItem) => void;
+  onBookmark?: (news: NewsItem) => void;
   isSummarizing?: boolean;
 }
 
@@ -65,9 +67,11 @@ export const NewsCard = memo(function NewsCard({
   source,
   onView,
   onDelete,
+  onBookmark,
   isSummarizing = false,
 }: NewsCardProps) {
   const hasQuickSummary = news.quickSummary && news.quickSummary.bullets.length > 0;
+  const isBookmarked = news.isBookmarked ?? false;
 
   return (
     <Card
@@ -135,6 +139,20 @@ export const NewsCard = memo(function NewsCard({
             className="flex-1"
           >
             View Details
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onBookmark?.(news)}
+            className={isBookmarked
+              ? "text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+              : "text-zinc-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+            }
+            aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+            title={isBookmarked ? "Remove bookmark" : "Bookmark"}
+          >
+            <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
           </Button>
 
           <Button

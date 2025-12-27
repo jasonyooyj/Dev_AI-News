@@ -38,6 +38,7 @@ export interface NewsItem {
   url: string;
   publishedAt?: string;
   isProcessed: boolean;
+  isBookmarked?: boolean;  // 북마크 여부
   createdAt: string;
   quickSummary?: QuickSummary;  // 3줄 핵심 요약
 }

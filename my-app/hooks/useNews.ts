@@ -18,6 +18,7 @@ export function useNews() {
   const addNewsItemToStore = useNewsStore((s) => s.addNewsItem);
   const updateNewsItemInStore = useNewsStore((s) => s.updateNewsItem);
   const deleteNewsItemFromStore = useNewsStore((s) => s.deleteNewsItem);
+  const toggleBookmarkInStore = useNewsStore((s) => s.toggleBookmark);
 
   // TanStack Query mutations
   const summarizeMutation = useSummarize();
@@ -57,6 +58,20 @@ export function useNews() {
       toast.success('News deleted');
     },
     [deleteNewsItemFromStore]
+  );
+
+  // Toggle bookmark
+  const toggleBookmark = useCallback(
+    (id: string) => {
+      const item = newsItems.find((n) => n.id === id);
+      toggleBookmarkInStore(id);
+      if (item?.isBookmarked) {
+        toast.success('Bookmark removed');
+      } else {
+        toast.success('Bookmarked');
+      }
+    },
+    [newsItems, toggleBookmarkInStore]
   );
 
   // Generate summary for a news item
@@ -152,6 +167,7 @@ export function useNews() {
     addNewsItem,
     updateNewsItem,
     deleteNewsItem,
+    toggleBookmark,
     fetchFromRss,
     scrapeUrl,
     refreshNews,
