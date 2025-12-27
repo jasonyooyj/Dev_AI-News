@@ -4,22 +4,21 @@ import { memo } from 'react';
 import {
   ExternalLink,
   Trash2,
-  Sparkles,
   Clock,
-  CheckCircle2,
+  Eye,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { NewsItem, Source } from '@/types/news';
+import { Spinner } from '@/components/ui/Spinner';
+import { NewsItem, Source, NewsCategory, NEWS_CATEGORY_LABELS } from '@/types/news';
 
 interface NewsCardProps {
   news: NewsItem;
   source?: Source;
-  onProcess?: (news: NewsItem) => void;
   onView?: (news: NewsItem) => void;
   onDelete?: (news: NewsItem) => void;
-  isProcessing?: boolean;
+  isSummarizing?: boolean;
 }
 
 function formatDate(dateString?: string): string {
@@ -41,78 +40,127 @@ function formatDate(dateString?: string): string {
   });
 }
 
+const categoryVariants: Record<NewsCategory, 'info' | 'success' | 'warning' | 'danger' | 'default'> = {
+  product: 'info',
+  update: 'success',
+  research: 'warning',
+  announcement: 'danger',
+  other: 'default',
+};
+
+function SummarySkeleton() {
+  return (
+    <div className="space-y-2.5" aria-label="Loading summary">
+      <div className="flex items-start gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 mt-1.5 shrink-0 animate-pulse" />
+        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full animate-pulse" />
+      </div>
+      <div className="flex items-start gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 mt-1.5 shrink-0 animate-pulse" style={{ animationDelay: '150ms' }} />
+        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-11/12 animate-pulse" style={{ animationDelay: '150ms' }} />
+      </div>
+      <div className="flex items-start gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 mt-1.5 shrink-0 animate-pulse" style={{ animationDelay: '300ms' }} />
+        <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-10/12 animate-pulse" style={{ animationDelay: '300ms' }} />
+      </div>
+    </div>
+  );
+}
+
+function SummaryLoading() {
+  return (
+    <div className="flex items-center gap-2 py-4">
+      <Spinner size="sm" />
+      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+        Generating summary...
+      </span>
+    </div>
+  );
+}
+
 export const NewsCard = memo(function NewsCard({
   news,
   source,
-  onProcess,
   onView,
   onDelete,
-  isProcessing = false,
+  isSummarizing = false,
 }: NewsCardProps) {
+  const hasQuickSummary = news.quickSummary && news.quickSummary.bullets.length > 0;
+
   return (
     <Card
       variant="default"
       padding="none"
-      className="group hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200 overflow-hidden"
+      className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden"
     >
-      <div className="p-4">
+      <div className="p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             {source && (
-              <Badge variant="info" size="sm">
+              <Badge variant="default" size="sm">
                 {source.name}
               </Badge>
             )}
-            <Badge
-              variant={news.isProcessed ? 'success' : 'default'}
-              size="sm"
-              dot
-            >
-              {news.isProcessed ? 'Processed' : 'Pending'}
-            </Badge>
+            {hasQuickSummary && news.quickSummary && (
+              <Badge
+                variant={categoryVariants[news.quickSummary.category]}
+                size="sm"
+              >
+                {NEWS_CATEGORY_LABELS[news.quickSummary.category]}
+              </Badge>
+            )}
           </div>
-          <div className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400 shrink-0">
             <Clock className="w-3 h-3" />
             <span>{formatDate(news.publishedAt || news.createdAt)}</span>
           </div>
         </div>
 
         {/* Title */}
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 mb-3 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
           {news.title}
         </h3>
 
-        {/* Content Preview */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-3 mb-4">
-          {news.originalContent}
-        </p>
+        {/* Summary Content */}
+        <div className="min-h-[72px] mb-4">
+          {isSummarizing ? (
+            <SummaryLoading />
+          ) : hasQuickSummary && news.quickSummary ? (
+            <ul className="space-y-1.5">
+              {news.quickSummary.bullets.map((bullet, index) => (
+                <li
+                  key={index}
+                  className="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-400"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 mt-1.5 shrink-0" />
+                  <span className="leading-relaxed">{bullet}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <SummarySkeleton />
+          )}
+        </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
           <Button
-            variant={news.isProcessed ? 'secondary' : 'primary'}
+            variant="primary"
             size="sm"
-            onClick={() => onProcess?.(news)}
-            isLoading={isProcessing}
-            disabled={isProcessing}
-            leftIcon={
-              news.isProcessed ? (
-                <CheckCircle2 className="w-4 h-4" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )
-            }
+            onClick={() => onView?.(news)}
+            leftIcon={<Eye className="w-4 h-4" />}
             className="flex-1"
           >
-            {news.isProcessed ? 'View Processed' : 'Process with AI'}
+            View Details
           </Button>
 
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onView?.(news)}
-            aria-label="View original"
+            onClick={() => window.open(news.url, '_blank', 'noopener,noreferrer')}
+            aria-label="Open original article"
+            title="Open original"
           >
             <ExternalLink className="w-4 h-4" />
           </Button>
@@ -123,6 +171,7 @@ export const NewsCard = memo(function NewsCard({
             onClick={() => onDelete?.(news)}
             className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
             aria-label="Delete news"
+            title="Delete"
           >
             <Trash2 className="w-4 h-4" />
           </Button>

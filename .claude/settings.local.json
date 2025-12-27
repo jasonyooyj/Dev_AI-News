@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(npm run build)",
+      "Bash(dir \"C:\\\\Users\\\\basqu\\\\Documents\\\\GitHub\\\\Dev_AI-News\\\\my-app\\\\components\")"
+    ]
+  }
+}

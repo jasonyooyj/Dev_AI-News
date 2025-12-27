@@ -23,8 +23,9 @@
 
 ### 3. AI 기반 컨텐츠 가공
 - **OpenAI GPT-4o-mini** 모델을 활용한 지능형 요약
+- **3줄 핵심 요약**: 뉴스 수집 시 자동으로 핵심 포인트 3개 추출
+- **카테고리 자동 분류**: product, update, research, announcement 등으로 분류
 - 원문 영어 기사를 자연스러운 한글로 번역 및 요약
-- 핵심 정보 추출 및 전문적인 톤 유지
 
 ### 4. 소셜 미디어 포맷팅
 각 플랫폼의 특성에 맞춰 자동으로 포맷팅:
@@ -34,11 +35,23 @@
 - **Instagram**: 이모지 활용, 해시태그 5-10개
 - **LinkedIn**: 전문적이고 인사이트 있는 내용
 
-### 5. 원클릭 복사 기능
+### 5. 스타일 템플릿 관리 (NEW!)
+- **AI 기반 문체 분석**: 예시 텍스트를 AI로 분석하여 톤과 특성 자동 추출
+- **플랫폼별 맞춤 템플릿**: 각 소셜 미디어 플랫폼에 맞는 문체 템플릿 저장
+- **기본 템플릿 설정**: 플랫폼별 기본 템플릿 지정으로 일관성 있는 콘텐츠 생성
+- **예시 기반 학습**: 3-5개 예시 텍스트로 사용자 고유의 문체 학습
+
+### 6. 피드백 및 재생성 시스템 (NEW!)
+- **즉시 피드백**: 생성된 콘텐츠에 대해 좋아요/싫어요 피드백 제공
+- **빠른 피드백 옵션**: "너무 형식적", "더 전문적으로", "해시태그 더 많이" 등 8가지 옵션
+- **맞춤 재생성**: 피드백을 반영하여 AI가 콘텐츠 즉시 재생성
+- **반복 개선**: 만족할 때까지 피드백과 재생성 반복 가능
+
+### 7. 원클릭 복사 기능
 - 플랫폼별로 가공된 컨텐츠를 클릭 한 번으로 클립보드에 복사
 - 바로 소셜 미디어에 게시 가능
 
-### 6. 반응형 UI
+### 8. 반응형 UI
 - 데스크톱, 태블릿, 모바일 모든 화면에 최적화
 - 직관적인 대시보드 인터페이스
 - 실시간 처리 상태 표시
@@ -117,8 +130,9 @@ my-app/
 │   ├── api/
 │   │   ├── rss/route.ts          # RSS 피드 파싱 API
 │   │   ├── scrape/route.ts        # URL 스크래핑 API
-│   │   └── openai/route.ts        # OpenAI 요약/포맷팅 API
+│   │   └── openai/route.ts        # OpenAI 요약/포맷팅 API (4가지 모드)
 │   ├── sources/page.tsx           # 소스 관리 페이지
+│   ├── settings/page.tsx          # 설정 페이지 (스타일 템플릿)
 │   ├── layout.tsx                 # 루트 레이아웃
 │   └── page.tsx                   # 메인 대시보드
 ├── components/
@@ -143,16 +157,20 @@ my-app/
 │   ├── collect/                   # 뉴스 수집 컴포넌트
 │   │   ├── RssFetcher.tsx
 │   │   └── UrlScraper.tsx
-│   └── social/                    # 소셜 미디어 컴포넌트
-│       ├── PlatformPreview.tsx
-│       └── CopyButton.tsx
+│   ├── social/                    # 소셜 미디어 컴포넌트
+│   │   ├── PlatformPreview.tsx
+│   │   ├── CopyButton.tsx
+│   │   └── FeedbackButtons.tsx    # 피드백 및 재생성 UI
+│   └── settings/                  # 설정 컴포넌트
+│       └── StyleEditor.tsx        # 스타일 템플릿 편집기
 ├── hooks/                         # 커스텀 React Hooks
 │   ├── useLocalStorage.ts
 │   ├── useSources.ts
 │   ├── useNews.ts
-│   └── useOpenAI.ts
+│   ├── useOpenAI.ts
+│   └── useStyleTemplates.ts       # 스타일 템플릿 관리
 ├── lib/                           # 유틸리티 함수
-│   ├── storage.ts                 # localStorage CRUD
+│   ├── storage.ts                 # localStorage CRUD (템플릿 포함)
 │   └── constants.ts               # 상수 및 기본값
 ├── types/
 │   └── news.ts                    # TypeScript 타입 정의
@@ -182,24 +200,37 @@ interface NewsItem {
   originalContent: string;
   url: string;
   publishedAt?: string;
-  isProcessed: boolean;
   createdAt: string;
+  quickSummary?: QuickSummary;  // NEW: 3줄 요약 및 카테고리
+}
+
+interface QuickSummary {
+  bullets: string[];              // 핵심 포인트 3개
+  category: NewsCategory;         // product | update | research | announcement | other
 }
 ```
 
-### ProcessedNews (AI 가공 결과)
+### StyleTemplate (스타일 템플릿)
 ```typescript
-interface ProcessedNews {
+interface StyleTemplate {
   id: string;
-  newsItemId: string;
-  summary: string;        // 한글 요약
-  platforms: {
-    twitter?: { content: string; charCount: number };
-    threads?: { content: string };
-    instagram?: { content: string; hashtags: string[] };
-    linkedin?: { content: string };
-  };
+  platform: Platform;             // twitter | threads | instagram | linkedin
+  name: string;                   // 템플릿 이름
+  examples: string[];             // 예시 텍스트 배열
+  tone?: string;                  // AI 분석된 톤
+  characteristics?: string[];     // AI 분석된 특성
+  isDefault: boolean;             // 플랫폼 기본 템플릿 여부
   createdAt: string;
+  updatedAt: string;
+}
+```
+
+### PlatformContent (플랫폼별 생성 콘텐츠)
+```typescript
+interface PlatformContent {
+  content: string;                // 생성된 포스트 내용
+  charCount: number;              // 글자수
+  hashtags?: string[];            // Instagram용 해시태그
 }
 ```
 
@@ -260,13 +291,47 @@ RSS 피드에서 뉴스 목록을 가져옵니다.
 ```
 
 ### POST /api/openai
-뉴스 내용을 AI로 요약하고 소셜 미디어 포맷으로 변환합니다.
+OpenAI API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 모드를 지원합니다.
+
+#### Mode 1: summarize (뉴스 요약)
+뉴스 수집 시 3줄 핵심 요약 및 카테고리 분류
 
 **Request:**
 ```json
 {
+  "mode": "summarize",
+  "title": "News Title",
+  "content": "News Content"
+}
+```
+
+**Response:**
+```json
+{
+  "bullets": [
+    "핵심 포인트 1",
+    "핵심 포인트 2",
+    "핵심 포인트 3"
+  ],
+  "category": "product"
+}
+```
+
+#### Mode 2: generate (플랫폼 콘텐츠 생성)
+특정 플랫폼용 콘텐츠를 스타일 템플릿에 맞춰 생성
+
+**Request:**
+```json
+{
+  "mode": "generate",
   "title": "News Title",
   "content": "News Content",
+  "platform": "twitter",
+  "styleTemplate": {
+    "tone": "전문적이면서 친근한 톤",
+    "characteristics": ["이모지 사용", "질문형 시작"],
+    "examples": ["예시 텍스트 1", "예시 텍스트 2"]
+  },
   "url": "https://..."
 }
 ```
@@ -274,13 +339,58 @@ RSS 피드에서 뉴스 목록을 가져옵니다.
 **Response:**
 ```json
 {
-  "summary": "한글 요약",
-  "platforms": {
-    "twitter": { "content": "...", "charCount": 280 },
-    "threads": { "content": "..." },
-    "instagram": { "content": "...", "hashtags": ["AI", "Tech"] },
-    "linkedin": { "content": "..." }
-  }
+  "content": "생성된 포스트 내용",
+  "charCount": 280,
+  "hashtags": ["AI", "Tech"]  // Instagram만
+}
+```
+
+#### Mode 3: analyze-style (문체 분석)
+예시 텍스트들을 분석하여 문체 특성 추출
+
+**Request:**
+```json
+{
+  "mode": "analyze-style",
+  "examples": [
+    "예시 텍스트 1",
+    "예시 텍스트 2",
+    "예시 텍스트 3"
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "tone": "캐주얼하면서도 정보성 있는 톤",
+  "characteristics": [
+    "이모지 자주 사용",
+    "질문으로 시작",
+    "해시태그 많이 활용",
+    "짧은 문장"
+  ]
+}
+```
+
+#### Mode 4: regenerate (피드백 기반 재생성)
+피드백을 반영하여 콘텐츠 재생성
+
+**Request:**
+```json
+{
+  "mode": "regenerate",
+  "previousContent": "기존 콘텐츠",
+  "feedback": "더 전문적으로. 해시태그 줄이기",
+  "platform": "linkedin"
+}
+```
+
+**Response:**
+```json
+{
+  "content": "수정된 포스트 내용",
+  "charCount": 500
 }
 ```
 
@@ -304,23 +414,45 @@ RSS 피드에서 뉴스 목록을 가져옵니다.
 3. "Scrape" 버튼 클릭하여 내용 추출
 4. 미리보기 확인 후 "Save as News" 클릭
 
-### 3. AI 가공 및 포맷팅
-1. "News Feed" 탭에서 처리할 뉴스 선택
-2. "Process with AI" 버튼 클릭
-3. 자동으로 한글 요약 및 4개 플랫폼용 컨텐츠 생성
-4. 각 플랫폼 탭에서 내용 확인
-5. "Copy" 버튼으로 클립보드에 복사
+### 3. 스타일 템플릿 설정 (선택사항)
+1. 상단 메뉴에서 "Settings" 클릭
+2. "Add Template" 버튼으로 새 템플릿 생성
+3. 플랫폼 선택 (Twitter, Threads, Instagram, LinkedIn)
+4. 템플릿 이름 입력
+5. 자신의 글쓰기 스타일을 보여주는 예시 텍스트 3-5개 추가
+6. "Analyze Style" 버튼 클릭하여 AI가 문체 분석
+7. 분석 결과 확인 후 "Create Template" 저장
+8. 별 아이콘을 클릭하여 기본 템플릿으로 설정
 
-### 4. 소셜 미디어 게시
-1. 처리된 뉴스의 "View Details" 클릭
-2. 원하는 플랫폼 탭 선택 (Twitter, Threads, Instagram, LinkedIn)
-3. "Copy" 버튼으로 포맷팅된 내용 복사
-4. 해당 소셜 미디어 앱에 붙여넣기 및 게시
+### 4. AI 가공 및 포맷팅
+1. "News Feed" 탭에서 뉴스 카드의 "View Details" 클릭
+2. 뉴스 상세 모달에서 원하는 플랫폼 탭 선택
+3. (선택사항) 스타일 템플릿 선택
+4. "Generate" 버튼 클릭하여 콘텐츠 생성
+5. 생성된 콘텐츠 확인
+6. 만족하지 않으면:
+   - 좋아요/싫어요 버튼으로 피드백 제공
+   - 빠른 피드백 옵션 선택 ("너무 형식적", "더 전문적으로" 등)
+   - "Regenerate" 버튼으로 피드백 반영하여 재생성
+7. 만족하면 "Copy" 버튼으로 클립보드에 복사
+
+### 5. 소셜 미디어 게시
+1. 복사된 콘텐츠를 해당 소셜 미디어 앱에 붙여넣기
+2. 필요시 추가 편집 후 게시
 
 ## 개발 로드맵
 
+### 완료된 기능 (v2.0)
+- [x] 3줄 핵심 요약 및 카테고리 자동 분류
+- [x] 스타일 템플릿 관리 시스템
+- [x] AI 기반 문체 분석
+- [x] 피드백 및 재생성 시스템
+- [x] 플랫폼별 맞춤 콘텐츠 생성
+- [x] Settings 페이지 추가
+
+### 향후 개발 계획
 - [ ] 다크 모드 지원
-- [ ] 뉴스 필터링 및 검색 기능
+- [ ] 뉴스 필터링 및 검색 기능 (카테고리, 날짜, 키워드)
 - [ ] 즐겨찾기/북마크 기능
 - [ ] 자동 스케줄링 (일정 시간마다 자동 수집)
 - [ ] 데이터 내보내기/가져오기 (JSON, CSV)
@@ -328,6 +460,8 @@ RSS 피드에서 뉴스 목록을 가져옵니다.
 - [ ] 다국어 지원 (영어, 일본어 등)
 - [ ] 이미지 처리 및 OG 이미지 추출
 - [ ] 통계 및 분석 대시보드
+- [ ] 멀티 계정 관리
+- [ ] 예약 게시 기능
 
 ## 문제 해결
 

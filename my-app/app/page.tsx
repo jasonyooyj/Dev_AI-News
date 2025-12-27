@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/Button';
 import { useSources } from '@/hooks/useSources';
 import { useNews } from '@/hooks/useNews';
 import { useOpenAI } from '@/hooks/useOpenAI';
-import { NewsItem, ProcessedNews, Source } from '@/types/news';
+import { useStyleTemplates } from '@/hooks/useStyleTemplates';
+import { NewsItem, ProcessedNews, Source, Platform, PlatformContent } from '@/types/news';
 import { getProcessedNewsByNewsId } from '@/lib/storage';
 
 interface FetchResult {
@@ -32,12 +33,15 @@ interface ScrapeResult {
 export default function DashboardPage() {
   const { sources, isLoading: sourcesLoading } = useSources();
   const { newsItems, isLoading: newsLoading, fetchFromRss, scrapeUrl, deleteNewsItem, refreshNews, addNewsItem } = useNews();
-  const { processNews, isProcessing } = useOpenAI();
+  const { isProcessing, generatePlatformContent, regenerateWithFeedback, addSummaryToNewsItem } = useOpenAI();
+  const { templates: styleTemplates } = useStyleTemplates();
 
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [processedData, setProcessedData] = useState<ProcessedNews | null>(null);
   const [activeTab, setActiveTab] = useState<'news' | 'collect'>('news');
-  const [processingIds, setProcessingIds] = useState<string[]>([]);
+  const [summarizingIds, setSummarizingIds] = useState<string[]>([]);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
+  const [generatedContents, setGeneratedContents] = useState<Partial<Record<Platform, PlatformContent>>>({});
 
   const activeSources = sources.filter((s) => s.isActive);
 
@@ -45,19 +49,84 @@ export default function DashboardPage() {
     setSelectedNews(newsItem);
     const processed = getProcessedNewsByNewsId(newsItem.id);
     setProcessedData(processed || null);
+    setGeneratedContents({});
   };
 
-  const handleProcessNews = async (newsItem: NewsItem) => {
-    setProcessingIds((prev) => [...prev, newsItem.id]);
+  const handleGenerateContent = async (
+    platform: Platform,
+    styleTemplateId?: string
+  ): Promise<PlatformContent | null> => {
+    if (!selectedNews) return null;
+
+    setIsGeneratingContent(true);
     try {
-      const result = await processNews(newsItem);
+      // Find the style template by ID
+      const styleTemplate = styleTemplateId
+        ? styleTemplates.find((t) => t.id === styleTemplateId)
+        : undefined;
+
+      const result = await generatePlatformContent(selectedNews, platform, styleTemplate);
       if (result) {
-        setProcessedData(result);
+        setGeneratedContents((prev) => ({
+          ...prev,
+          [platform]: result,
+        }));
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to generate content:', error);
+      return null;
+    } finally {
+      setIsGeneratingContent(false);
+    }
+  };
+
+  const handleRegenerateWithFeedback = async (
+    platform: Platform,
+    feedback: string
+  ): Promise<PlatformContent | null> => {
+    if (!selectedNews) return null;
+
+    const currentContent = generatedContents[platform];
+    if (!currentContent) return null;
+
+    setIsGeneratingContent(true);
+    try {
+      const result = await regenerateWithFeedback(currentContent.content, feedback, platform);
+      if (result) {
+        setGeneratedContents((prev) => ({
+          ...prev,
+          [platform]: result,
+        }));
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to regenerate content:', error);
+      return null;
+    } finally {
+      setIsGeneratingContent(false);
+    }
+  };
+
+  const handleSummarizeNews = async (newsItem: NewsItem) => {
+    setSummarizingIds((prev) => [...prev, newsItem.id]);
+    try {
+      const result = await addSummaryToNewsItem(newsItem);
+      if (result) {
         refreshNews();
       }
     } finally {
-      setProcessingIds((prev) => prev.filter((id) => id !== newsItem.id));
+      setSummarizingIds((prev) => prev.filter((id) => id !== newsItem.id));
     }
+  };
+
+  // Handler for processing news content for platform publishing (kept for NewsDetail modal)
+  const handleProcessForPlatforms = async (newsItem: NewsItem) => {
+    // Platform content generation is handled within the NewsDetail component
+    // This is a placeholder for future implementation
+    refreshNews();
   };
 
   const handleDeleteNews = (newsItem: NewsItem) => {
@@ -65,7 +134,14 @@ export default function DashboardPage() {
     if (selectedNews?.id === newsItem.id) {
       setSelectedNews(null);
       setProcessedData(null);
+      setGeneratedContents({});
     }
+  };
+
+  const handleCloseNewsDetail = () => {
+    setSelectedNews(null);
+    setProcessedData(null);
+    setGeneratedContents({});
   };
 
   // RssFetcher handlers
@@ -162,15 +238,15 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-green-600">
-                {newsItems.filter((n) => n.isProcessed).length}
+                {newsItems.filter((n) => n.quickSummary && n.quickSummary.bullets.length > 0).length}
               </div>
-              <div className="text-sm text-muted-foreground">Processed</div>
+              <div className="text-sm text-muted-foreground">Summarized</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-amber-600">
-                {newsItems.filter((n) => !n.isProcessed).length}
+                {newsItems.filter((n) => !n.quickSummary || n.quickSummary.bullets.length === 0).length}
               </div>
               <div className="text-sm text-muted-foreground">Pending</div>
             </CardContent>
@@ -205,9 +281,8 @@ export default function DashboardPage() {
             news={newsItems}
             sources={sources}
             onView={handleViewNews}
-            onProcess={handleProcessNews}
             onDelete={handleDeleteNews}
-            processingIds={processingIds}
+            summarizingIds={summarizingIds}
           />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -227,14 +302,13 @@ export default function DashboardPage() {
         <NewsDetail
           isOpen={selectedNews !== null}
           news={selectedNews}
-          processedNews={processedData}
           source={selectedNews ? sources.find((s) => s.id === selectedNews.sourceId) : undefined}
-          onClose={() => {
-            setSelectedNews(null);
-            setProcessedData(null);
-          }}
-          onProcess={handleProcessNews}
-          isProcessing={isProcessing}
+          onClose={handleCloseNewsDetail}
+          onGenerateContent={handleGenerateContent}
+          onRegenerateWithFeedback={handleRegenerateWithFeedback}
+          styleTemplates={styleTemplates}
+          isGenerating={isGeneratingContent}
+          generatedContents={generatedContents}
         />
       </div>
     </MainLayout>

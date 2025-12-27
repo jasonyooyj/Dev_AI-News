@@ -15,3 +15,6 @@ export * from './collect';
 
 // Social Components
 export * from './social';
+
+// Settings Components
+export * from './settings';

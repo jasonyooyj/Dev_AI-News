@@ -1,4 +1,4 @@
-import { Source, NewsItem, ProcessedNews } from '@/types/news';
+import { Source, NewsItem, ProcessedNews, StyleTemplate, Platform } from '@/types/news';
 import { STORAGE_KEYS, DEFAULT_SOURCES } from './constants';
 
 function getItem<T>(key: string, defaultValue: T): T {
@@ -102,4 +102,81 @@ export function getProcessedNewsByNewsId(newsItemId: string): ProcessedNews | un
 export function deleteProcessedNews(id: string): void {
   const items = getProcessedNews().filter((p) => p.id !== id);
   saveProcessedNews(items);
+}
+
+export function updateProcessedNews(id: string, updates: Partial<ProcessedNews>): void {
+  const items = getProcessedNews();
+  const index = items.findIndex((p) => p.id === id);
+  if (index !== -1) {
+    items[index] = { ...items[index], ...updates };
+    saveProcessedNews(items);
+  }
+}
+
+// Style Templates
+export function getStyleTemplates(): StyleTemplate[] {
+  return getItem<StyleTemplate[]>(STORAGE_KEYS.STYLE_TEMPLATES, []);
+}
+
+export function saveStyleTemplates(templates: StyleTemplate[]): void {
+  setItem(STORAGE_KEYS.STYLE_TEMPLATES, templates);
+}
+
+export function getStyleTemplatesByPlatform(platform: Platform): StyleTemplate[] {
+  return getStyleTemplates().filter((t) => t.platform === platform);
+}
+
+export function getDefaultStyleTemplate(platform: Platform): StyleTemplate | undefined {
+  return getStyleTemplates().find((t) => t.platform === platform && t.isDefault);
+}
+
+export function getStyleTemplate(id: string): StyleTemplate | undefined {
+  return getStyleTemplates().find((t) => t.id === id);
+}
+
+export function addStyleTemplate(template: StyleTemplate): void {
+  const templates = getStyleTemplates();
+  // 이 플랫폼의 첫 템플릿이면 기본으로 설정
+  if (!templates.some((t) => t.platform === template.platform)) {
+    template.isDefault = true;
+  }
+  templates.push(template);
+  saveStyleTemplates(templates);
+}
+
+export function updateStyleTemplate(id: string, updates: Partial<StyleTemplate>): void {
+  const templates = getStyleTemplates();
+  const index = templates.findIndex((t) => t.id === id);
+  if (index !== -1) {
+    templates[index] = { ...templates[index], ...updates, updatedAt: new Date().toISOString() };
+    saveStyleTemplates(templates);
+  }
+}
+
+export function deleteStyleTemplate(id: string): void {
+  const templates = getStyleTemplates();
+  const template = templates.find((t) => t.id === id);
+  if (!template) return;
+
+  const filtered = templates.filter((t) => t.id !== id);
+
+  // 삭제된 템플릿이 기본이었다면, 같은 플랫폼의 다른 템플릿을 기본으로
+  if (template.isDefault) {
+    const sameplatform = filtered.find((t) => t.platform === template.platform);
+    if (sameplatform) {
+      sameplatform.isDefault = true;
+    }
+  }
+
+  saveStyleTemplates(filtered);
+}
+
+export function setDefaultStyleTemplate(platform: Platform, id: string): void {
+  const templates = getStyleTemplates();
+  templates.forEach((t) => {
+    if (t.platform === platform) {
+      t.isDefault = t.id === id;
+    }
+  });
+  saveStyleTemplates(templates);
 }

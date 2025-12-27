@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Plus,
   RefreshCw,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -41,6 +42,11 @@ const navItems: NavItem[] = [
     label: 'Sources',
     href: '/sources',
     icon: <Database className="w-5 h-5" />,
+  },
+  {
+    label: 'Settings',
+    href: '/settings',
+    icon: <Settings className="w-5 h-5" />,
   },
 ];
 

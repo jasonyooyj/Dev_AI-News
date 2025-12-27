@@ -17,26 +17,24 @@ import { Spinner } from '@/components/ui/Spinner';
 import { NewsItem, Source } from '@/types/news';
 
 type ViewMode = 'grid' | 'list';
-type FilterStatus = 'all' | 'processed' | 'pending';
+type FilterStatus = 'all' | 'summarized' | 'pending';
 
 interface NewsListProps {
   news: NewsItem[];
   sources: Source[];
   isLoading?: boolean;
-  onProcess?: (news: NewsItem) => void;
   onView?: (news: NewsItem) => void;
   onDelete?: (news: NewsItem) => void;
-  processingIds?: string[];
+  summarizingIds?: string[];
 }
 
 export function NewsList({
   news,
   sources,
   isLoading = false,
-  onProcess,
   onView,
   onDelete,
-  processingIds = [],
+  summarizingIds = [],
 }: NewsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -64,9 +62,10 @@ export function NewsList({
         if (!matchesTitle && !matchesContent) return false;
       }
 
-      // Status filter
-      if (filterStatus === 'processed' && !item.isProcessed) return false;
-      if (filterStatus === 'pending' && item.isProcessed) return false;
+      // Status filter (based on quickSummary availability)
+      const hasSummary = item.quickSummary && item.quickSummary.bullets.length > 0;
+      if (filterStatus === 'summarized' && !hasSummary) return false;
+      if (filterStatus === 'pending' && hasSummary) return false;
 
       // Source filter
       if (filterSourceId !== 'all' && item.sourceId !== filterSourceId) return false;
@@ -76,11 +75,11 @@ export function NewsList({
   }, [news, searchQuery, filterStatus, filterSourceId]);
 
   const stats = useMemo(() => {
-    const processed = news.filter((n) => n.isProcessed).length;
+    const summarized = news.filter((n) => n.quickSummary && n.quickSummary.bullets.length > 0).length;
     return {
       total: news.length,
-      processed,
-      pending: news.length - processed,
+      summarized,
+      pending: news.length - summarized,
     };
   }, [news]);
 
@@ -160,7 +159,7 @@ export function NewsList({
               Status
             </label>
             <div className="flex items-center gap-1">
-              {(['all', 'processed', 'pending'] as FilterStatus[]).map(
+              {(['all', 'summarized', 'pending'] as FilterStatus[]).map(
                 (status) => (
                   <button
                     key={status}
@@ -209,7 +208,7 @@ export function NewsList({
         </span>
         <div className="flex items-center gap-2">
           <Badge variant="success" size="sm">
-            {stats.processed} processed
+            {stats.summarized} summarized
           </Badge>
           <Badge variant="warning" size="sm">
             {stats.pending} pending
@@ -247,10 +246,9 @@ export function NewsList({
               key={item.id}
               news={item}
               source={sourceMap[item.sourceId]}
-              onProcess={onProcess}
               onView={onView}
               onDelete={onDelete}
-              isProcessing={processingIds.includes(item.id)}
+              isSummarizing={summarizingIds.includes(item.id)}
             />
           ))}
         </div>

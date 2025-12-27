@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { NewsItem, ProcessedNews, Source } from '@/types/news';
+import { NewsItem, ProcessedNews, Source, QuickSummary } from '@/types/news';
 import {
   getNewsItems,
   saveNewsItems,
@@ -19,6 +19,7 @@ export function useNews() {
   const [processedNews, setProcessedNews] = useState<ProcessedNews[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
+  const [summarizingIds, setSummarizingIds] = useState<string[]>([]);
 
   useEffect(() => {
     setNewsItems(getNewsItems());
@@ -48,7 +49,52 @@ export function useNews() {
     setNewsItems(getNewsItems());
   }, []);
 
-  const fetchFromRss = useCallback(async (source: Source) => {
+  // 개별 뉴스 아이템에 대한 요약 생성
+  const generateSummary = useCallback(async (newsItem: NewsItem): Promise<NewsItem | null> => {
+    if (newsItem.quickSummary) return newsItem;
+
+    setSummarizingIds((prev) => [...prev, newsItem.id]);
+    try {
+      const response = await fetch('/api/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'summarize',
+          title: newsItem.title,
+          content: newsItem.originalContent,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate summary');
+      }
+
+      const data = await response.json();
+      const summary: QuickSummary = {
+        bullets: data.bullets || [],
+        category: data.category || 'other',
+        createdAt: new Date().toISOString(),
+      };
+
+      updateNewsItemInStorage(newsItem.id, { quickSummary: summary });
+      setNewsItems(getNewsItems());
+      return { ...newsItem, quickSummary: summary };
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      return null;
+    } finally {
+      setSummarizingIds((prev) => prev.filter((id) => id !== newsItem.id));
+    }
+  }, []);
+
+  // 여러 뉴스 아이템에 대한 요약 일괄 생성
+  const generateSummariesForItems = useCallback(async (items: NewsItem[]): Promise<void> => {
+    for (const item of items) {
+      await generateSummary(item);
+    }
+  }, [generateSummary]);
+
+  const fetchFromRss = useCallback(async (source: Source, autoSummarize = true) => {
     if (!source.rssUrl) return [];
 
     setIsFetching(true);
@@ -78,6 +124,11 @@ export function useNews() {
         }
       }
 
+      // 자동 요약 생성
+      if (autoSummarize && newItems.length > 0) {
+        generateSummariesForItems(newItems);
+      }
+
       return newItems;
     } catch (error) {
       console.error('Error fetching RSS:', error);
@@ -85,9 +136,9 @@ export function useNews() {
     } finally {
       setIsFetching(false);
     }
-  }, [newsItems, addNewsItem]);
+  }, [newsItems, addNewsItem, generateSummariesForItems]);
 
-  const scrapeUrl = useCallback(async (url: string, sourceId: string) => {
+  const scrapeUrl = useCallback(async (url: string, sourceId: string, autoSummarize = true) => {
     setIsFetching(true);
     try {
       const response = await fetch('/api/scrape', {
@@ -108,6 +159,11 @@ export function useNews() {
         publishedAt: new Date().toISOString(),
       });
 
+      // 자동 요약 생성
+      if (autoSummarize) {
+        generateSummary(newsItem);
+      }
+
       return newsItem;
     } catch (error) {
       console.error('Error scraping URL:', error);
@@ -115,7 +171,7 @@ export function useNews() {
     } finally {
       setIsFetching(false);
     }
-  }, [addNewsItem]);
+  }, [addNewsItem, generateSummary]);
 
   const refreshNews = useCallback(() => {
     setNewsItems(getNewsItems());
@@ -131,6 +187,7 @@ export function useNews() {
     processedNews,
     isLoading,
     isFetching,
+    summarizingIds,
     addNewsItem,
     updateNewsItem,
     deleteNewsItem,
@@ -138,5 +195,7 @@ export function useNews() {
     scrapeUrl,
     refreshNews,
     getProcessedForNews,
+    generateSummary,
+    generateSummariesForItems,
   };
 }

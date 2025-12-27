@@ -41,4 +41,5 @@ export const STORAGE_KEYS = {
   SOURCES: 'ai-news-sources',
   NEWS_ITEMS: 'ai-news-items',
   PROCESSED_NEWS: 'ai-news-processed',
+  STYLE_TEMPLATES: 'ai-news-style-templates',
 } as const;
