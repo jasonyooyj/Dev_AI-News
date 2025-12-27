@@ -22,7 +22,7 @@ function getAIClient(provider?: AIProvider): ProviderConfig {
         apiKey,
         baseURL: 'https://api.deepseek.com/v1',
       }),
-      model: 'deepseek-chat',
+      model: 'deepseek-reasoner',
       supportsJsonMode: false, // DeepSeek doesn't support response_format
     };
   }
@@ -76,7 +76,7 @@ export async function GET() {
     defaultProvider: hasOpenAI || hasDeepSeek ? defaultProvider : null,
     models: {
       openai: 'gpt-4o-mini',
-      deepseek: 'deepseek-chat',
+      deepseek: 'deepseek-reasoner',
     },
   });
 }
