@@ -99,26 +99,36 @@ export function useNews() {
     async (items: NewsItem[]) => {
       for (const item of items) {
         if (!item.quickSummary) {
-          await generateSummary(item);
+          try {
+            await generateSummary(item);
+            // Small delay between API calls to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (error) {
+            console.error(`Failed to summarize ${item.title}:`, error);
+            // Continue with next item even if one fails
+          }
         }
       }
     },
     [generateSummary]
   );
 
-  // Fetch from RSS
+  // Fetch from source (RSS or web scraping)
   const fetchFromRss = useCallback(
     async (source: Source, autoSummarize = true) => {
-      if (!source.rssUrl) return [];
-
+      // Both RSS and scraping are supported via the mutation
       try {
         await fetchRssMutation.mutateAsync({ source });
 
-        // If auto summarize, run summaries for new items
+        // If auto summarize, run summaries for new items (with delay to avoid rate limiting)
         if (autoSummarize) {
+          // Wait a bit for store to update
+          await new Promise(resolve => setTimeout(resolve, 500));
+
           const items = useNewsStore.getState().newsItems.filter(
             (n) => n.sourceId === source.id && !n.quickSummary
           );
+
           // Don't await - run in background
           generateSummariesForItems(items);
         }

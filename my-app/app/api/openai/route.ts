@@ -13,9 +13,28 @@ function getAIClient(): OpenAI {
   });
 }
 
-const MODEL = 'deepseek-reasoner';
+const MODEL = 'deepseek-chat'; // deepseek-reasoner 대신 더 안정적인 chat 모델 사용
 
-type Mode = 'summarize' | 'generate' | 'analyze-style' | 'regenerate';
+// JSON 추출 함수 - 응답에서 유효한 JSON만 추출
+function extractJSON(text: string): object {
+  // 먼저 전체 텍스트가 JSON인지 확인
+  try {
+    return JSON.parse(text);
+  } catch {
+    // JSON 블록을 찾아서 추출
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch {
+        // JSON 파싱 실패 시 기본값 반환
+      }
+    }
+  }
+  return {};
+}
+
+type Mode = 'summarize' | 'generate' | 'analyze-style' | 'regenerate' | 'translate';
 
 interface RequestBody {
   mode: Mode;
@@ -49,11 +68,25 @@ export async function POST(request: NextRequest) {
     if (mode === 'summarize') {
       const { title, content } = body;
 
-      if (!title || !content) {
+      // 빈 content나 너무 짧은 content 처리
+      if (!title) {
         return NextResponse.json(
-          { error: 'Title and content are required for summarize mode' },
+          { error: 'Title is required for summarize mode' },
           { status: 400 }
         );
+      }
+
+      // content가 없거나 너무 짧으면 기본 요약 반환
+      const trimmedContent = (content || '').trim();
+      if (trimmedContent.length < 50) {
+        return NextResponse.json({
+          bullets: [
+            `${title} - 자세한 내용은 원문을 확인하세요.`,
+            '추가 정보가 필요합니다.',
+            '원문 링크에서 전체 내용을 확인할 수 있습니다.'
+          ],
+          category: 'other'
+        });
       }
 
       const completion = await ai.chat.completions.create({
@@ -69,14 +102,14 @@ export async function POST(request: NextRequest) {
 - 업계/사용자에게 미치는 실질적 임팩트 분석
 - 전문 용어는 쉽게 풀어서 설명
 
-반드시 유효한 JSON 형식으로만 응답하세요.`,
+반드시 유효한 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.`,
           },
           {
             role: 'user',
             content: `다음 뉴스를 콘텐츠 라이터 관점에서 정리해주세요:
 
 제목: ${title}
-내용: ${content}
+내용: ${trimmedContent.substring(0, 3000)}
 
 다음 JSON 형식으로 응답해주세요:
 {
@@ -86,19 +119,23 @@ export async function POST(request: NextRequest) {
     "세 번째 포인트: 사용자/업계에 미치는 실질적 영향과 의미 (40-60자)"
   ],
   "category": "product|update|research|announcement|other 중 하나"
-}
-
-작성 가이드:
-- 각 bullet은 완결된 문장으로, 콘텐츠 글처럼 자연스럽게 작성
-- 단순 요약이 아닌 "그래서 이게 왜 중요해?"에 답하는 내용
-- 숫자, 비교, 구체적 사례를 활용해 임팩트를 전달
-- 독자가 이 뉴스의 가치를 바로 파악할 수 있도록`,
+}`,
           },
         ],
         temperature: 0.6,
       });
 
-      const result = JSON.parse(completion.choices[0].message.content || '{}');
+      const responseText = completion.choices[0].message.content || '{}';
+      const result = extractJSON(responseText);
+
+      // bullets가 없으면 기본값 설정
+      if (!result || !(result as {bullets?: string[]}).bullets) {
+        return NextResponse.json({
+          bullets: [`${title}에 대한 요약입니다.`, '자세한 내용은 원문을 확인하세요.', '추가 정보가 제공되지 않았습니다.'],
+          category: 'other'
+        });
+      }
+
       return NextResponse.json(result);
     }
 
@@ -168,7 +205,8 @@ ${url ? `원문 링크: ${url}` : ''}
         temperature: 0.7,
       });
 
-      const result = JSON.parse(completion.choices[0].message.content || '{}');
+      const responseText = completion.choices[0].message.content || '{}';
+      const result = extractJSON(responseText);
       return NextResponse.json(result);
     }
 
@@ -212,7 +250,8 @@ ${examples.map((e, i) => `예시 ${i + 1}:\n${e}`).join('\n\n')}
         temperature: 0.5,
       });
 
-      const result = JSON.parse(completion.choices[0].message.content || '{}');
+      const responseText = completion.choices[0].message.content || '{}';
+      const result = extractJSON(responseText);
       return NextResponse.json(result);
     }
 
@@ -265,8 +304,70 @@ ${previousContent}
         temperature: 0.7,
       });
 
-      const result = JSON.parse(completion.choices[0].message.content || '{}');
+      const responseText = completion.choices[0].message.content || '{}';
+      const result = extractJSON(responseText);
       return NextResponse.json(result);
+    }
+
+    // === MODE: translate ===
+    // 기사 번역 및 포맷팅
+    if (mode === 'translate') {
+      const { title, content } = body;
+
+      if (!content) {
+        return NextResponse.json(
+          { error: 'Content is required for translate mode' },
+          { status: 400 }
+        );
+      }
+
+      // 콘텐츠가 너무 짧으면 그대로 반환
+      const trimmedContent = content.trim();
+      if (trimmedContent.length < 20) {
+        return NextResponse.json({
+          title: title || '',
+          content: trimmedContent,
+          isTranslated: false,
+        });
+      }
+
+      const completion = await ai.chat.completions.create({
+        model: MODEL,
+        messages: [
+          {
+            role: 'system',
+            content: `당신은 AI/테크 전문 번역가입니다. 영어 기사를 자연스러운 한국어로 번역하고, 읽기 좋게 포맷팅합니다.
+
+번역 원칙:
+- 기술 용어는 적절히 한글화하되, 널리 알려진 영어 용어는 유지 (예: API, LLM, GPU)
+- 자연스러운 한국어 문장으로 의역
+- 원문의 의미와 뉘앙스 보존
+
+포맷팅 원칙:
+- 문단을 적절히 나누어 가독성 향상
+- 중요한 내용은 강조
+- 리스트가 있으면 정리
+- HTML 태그 사용 금지, 순수 텍스트로만 작성
+- 빈 줄로 문단 구분`,
+          },
+          {
+            role: 'user',
+            content: `다음 기사를 한국어로 번역하고 읽기 좋게 포맷팅해주세요:
+
+${title ? `제목: ${title}\n\n` : ''}내용:
+${trimmedContent.substring(0, 8000)}`,
+          },
+        ],
+        temperature: 0.3,
+      });
+
+      const translatedContent = completion.choices[0].message.content || trimmedContent;
+
+      return NextResponse.json({
+        title: title || '',
+        content: translatedContent,
+        isTranslated: true,
+      });
     }
 
     return NextResponse.json({ error: 'Invalid mode' }, { status: 400 });

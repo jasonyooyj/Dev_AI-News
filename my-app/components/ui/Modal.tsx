@@ -63,7 +63,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         {/* Backdrop */}
         <div
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          className="absolute inset-0 bg-black/60 animate-in fade-in duration-150"
           onClick={onClose}
           aria-hidden="true"
         />

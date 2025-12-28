@@ -14,8 +14,14 @@ export const DEFAULT_SOURCES: Source[] = [
     id: uuidv4(),
     name: 'Anthropic News',
     description: 'Claude AI를 만든 Anthropic의 AI 안전성 연구 및 기업 소식',
-    websiteUrl: 'https://anthropic.com/news',
+    websiteUrl: 'https://www.anthropic.com/news',
     isActive: true,
+    scrapeConfig: {
+      articleSelector: 'a[href*="/news/"]',
+      titleSelector: 'h3, .title, span',
+      linkSelector: 'a[href]',
+      descriptionSelector: 'p',
+    },
   },
   {
     id: uuidv4(),
@@ -31,6 +37,12 @@ export const DEFAULT_SOURCES: Source[] = [
     description: 'LLaMA, SAM 등 Meta의 오픈소스 AI 연구 및 메타버스 기술',
     websiteUrl: 'https://ai.meta.com/blog/',
     isActive: true,
+    scrapeConfig: {
+      articleSelector: 'article, .blog-post, a[href*="/blog/"]',
+      titleSelector: 'h2, h3, .title',
+      linkSelector: 'a[href]',
+      descriptionSelector: 'p, .excerpt',
+    },
   },
   {
     id: uuidv4(),

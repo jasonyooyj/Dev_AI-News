@@ -7,6 +7,14 @@ export interface Source {
   websiteUrl: string;
   isActive: boolean;
   lastFetchedAt?: string;
+  // Scraping configuration for non-RSS sources
+  scrapeConfig?: {
+    articleSelector: string;      // CSS selector for article list items
+    titleSelector: string;        // CSS selector for title within article
+    linkSelector: string;         // CSS selector for link within article
+    descriptionSelector?: string; // Optional: CSS selector for description
+    dateSelector?: string;        // Optional: CSS selector for date
+  };
 }
 
 // 뉴스 카테고리

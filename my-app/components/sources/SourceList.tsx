@@ -12,6 +12,7 @@ import {
   Clock,
   Plus,
   Database,
+  Globe,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -180,10 +181,15 @@ function SourceCard({ source, onEdit, onDelete, onToggle }: SourceCardProps) {
             <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate">{source.websiteUrl}</span>
           </a>
-          {source.rssUrl && (
+          {source.rssUrl ? (
             <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-500">
-              <Rss className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="truncate">{source.rssUrl}</span>
+              <Rss className="w-3.5 h-3.5 flex-shrink-0 text-orange-500" />
+              <span className="truncate">RSS Feed</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-500">
+              <Globe className="w-3.5 h-3.5 flex-shrink-0 text-blue-500" />
+              <span className="truncate">Web Scraping</span>
             </div>
           )}
         </div>
@@ -252,13 +258,24 @@ export function SourceList({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-          News Sources
-        </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-          {sources.length} sources ({activeCount} active)
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+              News Sources
+            </h2>
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              {sources.length} sources ({activeCount} active)
+            </span>
+          </div>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            Manage your AI news sources. Add RSS feeds or websites to collect news from.
+          </p>
+        </div>
+        <Button onClick={() => onAdd?.()}>
+          <Plus className="w-4 h-4 mr-2" />
+          Add Source
+        </Button>
       </div>
 
       {/* Sources Grid */}

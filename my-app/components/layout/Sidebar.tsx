@@ -12,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -181,7 +182,7 @@ export function Sidebar({
                       {source.rssUrl ? (
                         <Rss className="w-4 h-4 text-orange-500 flex-shrink-0" />
                       ) : (
-                        <Link2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                        <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />
                       )}
                       <span
                         className={`flex-1 truncate ${

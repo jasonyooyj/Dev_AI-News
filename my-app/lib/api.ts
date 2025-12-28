@@ -36,6 +36,27 @@ interface ScrapeResponse {
   url?: string;
 }
 
+interface ScrapedArticle {
+  title: string;
+  link: string;
+  description?: string;
+  pubDate?: string;
+}
+
+interface ScrapeSourceResponse {
+  articles: ScrapedArticle[];
+  count: number;
+  url: string;
+}
+
+interface ScrapeConfig {
+  articleSelector: string;
+  titleSelector: string;
+  linkSelector: string;
+  descriptionSelector?: string;
+  dateSelector?: string;
+}
+
 // Error handling
 class ApiError extends Error {
   constructor(
@@ -125,6 +146,18 @@ export const api = {
       });
       return handleResponse<GenerateResponse>(response);
     },
+
+    translate: async (
+      title: string,
+      content: string
+    ): Promise<{ title: string; content: string; isTranslated: boolean }> => {
+      const response = await fetch('/api/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'translate', title, content }),
+      });
+      return handleResponse<{ title: string; content: string; isTranslated: boolean }>(response);
+    },
   },
 
   // RSS Feed
@@ -149,6 +182,16 @@ export const api = {
       });
       return handleResponse<ScrapeResponse>(response);
     },
+
+    // Scrape news list from source website
+    fetchSource: async (url: string, scrapeConfig?: ScrapeConfig): Promise<ScrapeSourceResponse> => {
+      const response = await fetch('/api/scrape-source', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, scrapeConfig }),
+      });
+      return handleResponse<ScrapeSourceResponse>(response);
+    },
   },
 };
 
@@ -160,4 +203,7 @@ export type {
   RssItem,
   RssResponse,
   ScrapeResponse,
+  ScrapedArticle,
+  ScrapeSourceResponse,
+  ScrapeConfig,
 };

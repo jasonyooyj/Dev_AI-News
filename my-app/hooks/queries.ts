@@ -100,7 +100,7 @@ export function useAnalyzeStyle() {
   });
 }
 
-// ============ RSS Feed Mutations ============
+// ============ Source Fetch Mutations (RSS + Scraping) ============
 export function useFetchRss() {
   const addNewsItem = useNewsStore((s) => s.addNewsItem);
   const newsItems = useNewsStore((s) => s.newsItems);
@@ -108,32 +108,78 @@ export function useFetchRss() {
 
   return useMutation({
     mutationFn: async ({ source }: { source: Source }) => {
-      if (!source.rssUrl) throw new Error('Source has no RSS URL');
-      const result = await api.rss.fetch(source.rssUrl);
-      return { source, items: result.items };
+      // If source has RSS, use RSS feed
+      if (source.rssUrl) {
+        const result = await api.rss.fetch(source.rssUrl);
+        return {
+          source,
+          items: result.items.map(item => ({
+            title: item.title,
+            link: item.link,
+            content: item.content || item.contentSnippet || '',
+            pubDate: item.isoDate || item.pubDate,
+          }))
+        };
+      }
+
+      // Otherwise, scrape the website
+      const result = await api.scrape.fetchSource(source.websiteUrl, source.scrapeConfig);
+
+      // For scraped articles, fetch content sequentially with delays to avoid bot detection
+      const itemsWithContent = [];
+      const articlesToFetch = result.articles.slice(0, 5); // Limit to 5 to reduce load
+
+      for (const article of articlesToFetch) {
+        try {
+          // Random delay between 1-3 seconds between requests
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+          const scraped = await api.scrape.fetch(article.link);
+          itemsWithContent.push({
+            title: article.title,
+            link: article.link,
+            content: scraped.content || article.description || '',
+            pubDate: article.pubDate,
+          });
+        } catch {
+          // If scraping fails, still add the article with description as content
+          itemsWithContent.push({
+            title: article.title,
+            link: article.link,
+            content: article.description || '',
+            pubDate: article.pubDate,
+          });
+        }
+      }
+
+      return { source, items: itemsWithContent };
     },
     onSuccess: ({ source, items }) => {
       let addedCount = 0;
+      const existingUrls = new Set(newsItems.map((n) => n.url));
+
       items.forEach((item) => {
-        const existingUrls = newsItems.map((n) => n.url);
-        if (!existingUrls.includes(item.link)) {
+        if (!existingUrls.has(item.link)) {
           addNewsItem({
             sourceId: source.id,
             title: item.title,
-            originalContent: item.content || item.contentSnippet || '',
+            originalContent: item.content || '',
             url: item.link,
-            publishedAt: item.isoDate || item.pubDate || new Date().toISOString(),
+            publishedAt: item.pubDate || new Date().toISOString(),
             isProcessed: false,
           });
           addedCount++;
         }
       });
+
       // Update lastFetchedAt for the source
       updateSource(source.id, { lastFetchedAt: new Date().toISOString() });
-      toast.success(`Fetched ${addedCount} new articles from ${source.name}`);
+
+      const method = source.rssUrl ? 'RSS' : 'scraping';
+      toast.success(`Fetched ${addedCount} new articles from ${source.name} (${method})`);
     },
     onError: (error: ApiError) => {
-      toast.error(`Failed to fetch RSS: ${error.message}`);
+      toast.error(`Failed to fetch: ${error.message}`);
     },
   });
 }

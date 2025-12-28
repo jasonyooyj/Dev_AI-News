@@ -72,7 +72,7 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
     setTimeout(() => {
       document.documentElement.classList.remove('theme-transition');
       setIsAnimating(false);
-    }, 300);
+    }, 200);
   }, [theme, isAnimating]);
 
   return (

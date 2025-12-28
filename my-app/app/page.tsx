@@ -214,7 +214,7 @@ export default function DashboardPage() {
 
   if (sourcesLoading || newsLoading) {
     return (
-      <MainLayout>
+      <MainLayout sources={sources}>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <MainLayout>
+    <MainLayout sources={sources}>
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

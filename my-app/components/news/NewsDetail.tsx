@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ExternalLink,
   Clock,
@@ -283,29 +283,190 @@ function SummaryTabContent({ quickSummary }: { quickSummary?: QuickSummary }) {
 
 // Full Article Tab Content
 function FullArticleTabContent({
-  content,
   url,
+  title,
+  cachedContent,
+  onContentLoaded,
 }: {
-  content: string;
   url: string;
+  title: string;
+  cachedContent?: string;
+  onContentLoaded: (content: string) => void;
 }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [translatedContent, setTranslatedContent] = useState<string | null>(cachedContent || null);
+  const [loadingStep, setLoadingStep] = useState<'fetching' | 'translating'>('fetching');
+
+  // Fetch and translate full article content
+  const fetchAndTranslateArticle = async () => {
+    if (translatedContent) return; // Already loaded
+
+    setIsLoading(true);
+    setError(null);
+    setLoadingStep('fetching');
+
+    try {
+      // Step 1: Fetch the article
+      const scrapeResponse = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!scrapeResponse.ok) {
+        throw new Error('Failed to fetch article');
+      }
+
+      const scrapeData = await scrapeResponse.json();
+      const rawContent = scrapeData.content || '';
+
+      if (!rawContent || rawContent.length < 50) {
+        setTranslatedContent('콘텐츠를 가져올 수 없습니다. 원문 링크를 확인해주세요.');
+        onContentLoaded('');
+        return;
+      }
+
+      // Step 2: Translate and format
+      setLoadingStep('translating');
+      setIsTranslating(true);
+
+      const translateResponse = await fetch('/api/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'translate',
+          title,
+          content: rawContent,
+        }),
+      });
+
+      if (!translateResponse.ok) {
+        // If translation fails, show raw content
+        setTranslatedContent(rawContent);
+        onContentLoaded(rawContent);
+        return;
+      }
+
+      const translateData = await translateResponse.json();
+      setTranslatedContent(translateData.content || rawContent);
+      onContentLoaded(translateData.content || rawContent);
+    } catch (err) {
+      setError('기사를 불러오는데 실패했습니다. 원문 링크를 확인해주세요.');
+      console.error('Failed to fetch/translate article:', err);
+    } finally {
+      setIsLoading(false);
+      setIsTranslating(false);
+    }
+  };
+
+  // Fetch on mount if not cached
+  useEffect(() => {
+    if (!cachedContent && !translatedContent) {
+      fetchAndTranslateArticle();
+    }
+  }, [url]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <Spinner size="lg" />
+        <div className="text-center">
+          <p className="font-medium text-zinc-900 dark:text-zinc-100">
+            {loadingStep === 'fetching' ? '기사 가져오는 중...' : '번역 및 포맷팅 중...'}
+          </p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            {loadingStep === 'fetching'
+              ? '원문을 스크래핑하고 있습니다'
+              : 'AI가 한국어로 번역하고 있습니다'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg">
+          {error}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={fetchAndTranslateArticle}>
+            다시 시도
+          </Button>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            <ExternalLink className="w-4 h-4" />
+            원문 보기
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Format the content with proper paragraphs
+  const formattedParagraphs = (translatedContent || '')
+    .split(/\n\n+/)
+    .filter(p => p.trim().length > 0);
+
   return (
     <div className="space-y-4">
-      <div className="prose prose-zinc dark:prose-invert max-w-none">
-        <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
-          {content}
-        </p>
+      {/* Translated badge */}
+      <div className="flex items-center gap-2">
+        <Badge variant="info" size="sm">
+          🌐 한국어 번역
+        </Badge>
       </div>
 
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-      >
-        <ExternalLink className="w-4 h-4" />
-        View original article
-      </a>
+      {/* Article content with nice formatting */}
+      <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800">
+        <div className="space-y-4">
+          {formattedParagraphs.map((paragraph, index) => {
+            // Check if it's a list item
+            if (paragraph.trim().startsWith('•') || paragraph.trim().startsWith('-') || paragraph.trim().match(/^\d+\./)) {
+              const items = paragraph.split(/\n/).filter(item => item.trim());
+              return (
+                <ul key={index} className="list-disc list-inside space-y-2 text-zinc-700 dark:text-zinc-300">
+                  {items.map((item, i) => (
+                    <li key={i} className="leading-relaxed">
+                      {item.replace(/^[•\-\d.]+\s*/, '')}
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+
+            // Regular paragraph
+            return (
+              <p key={index} className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[15px]">
+                {paragraph}
+              </p>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Original link */}
+      <div className="flex items-center justify-between pt-2">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          <ExternalLink className="w-4 h-4" />
+          원문 보기
+        </a>
+        <span className="text-xs text-zinc-400 dark:text-zinc-500">
+          AI 번역 · 원문과 다를 수 있습니다
+        </span>
+      </div>
     </div>
   );
 }
@@ -451,9 +612,16 @@ export function NewsDetail({
   const [activeTab, setActiveTab] = useState<TabType>('summary');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('twitter');
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Partial<Record<Platform, string>>>({});
+  const [fullArticleContent, setFullArticleContent] = useState<string | undefined>(undefined);
 
   const platforms = Object.keys(PLATFORM_CONFIGS) as Platform[];
   const isBookmarked = news?.isBookmarked ?? false;
+
+  // Reset full article content when news changes
+  useEffect(() => {
+    setFullArticleContent(undefined);
+    setActiveTab('summary');
+  }, [news?.id]);
 
   if (!news) return null;
 
@@ -544,8 +712,10 @@ export function NewsDetail({
 
         {activeTab === 'full-article' && (
           <FullArticleTabContent
-            content={news.originalContent}
             url={news.url}
+            title={news.title}
+            cachedContent={fullArticleContent}
+            onContentLoaded={setFullArticleContent}
           />
         )}
 

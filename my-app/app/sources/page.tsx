@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SourceList } from '@/components/sources/SourceList';
 import { SourceForm } from '@/components/sources/SourceForm';
-import { Button } from '@/components/ui/Button';
 import { useSources } from '@/hooks/useSources';
 import { Source } from '@/types/news';
 
@@ -62,7 +61,7 @@ export default function SourcesPage() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <MainLayout sources={sources}>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -71,24 +70,8 @@ export default function SourcesPage() {
   }
 
   return (
-    <MainLayout>
+    <MainLayout sources={sources}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">News Sources</h1>
-            <p className="text-muted-foreground">
-              Manage your AI news sources. Add RSS feeds or websites to collect news from.
-            </p>
-          </div>
-          <Button onClick={handleAdd}>
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Source
-          </Button>
-        </div>
-
         {/* Source List */}
         <SourceList
           sources={sources}

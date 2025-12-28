@@ -2,6 +2,7 @@
 
 > 최신 AI 기술 뉴스를 수집하고, DeepSeek AI를 활용하여 한글로 요약 및 소셜 미디어 플랫폼별로 포맷팅하는 웹 애플리케이션
 
+![Version](https://img.shields.io/badge/version-0.3.0-blue?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19.2.3-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
@@ -15,15 +16,19 @@
 - RSS 피드 URL 지원
 - 소스별 활성화/비활성화 관리
 
-### 2. 자동 뉴스 수집
+### 2. 자동 뉴스 수집 (NEW!)
 - **RSS 피드 자동 수집**: 등록된 소스의 RSS 피드에서 최신 뉴스 자동 파싱
+- **웹 스크래핑 자동화**: RSS가 없는 소스도 자동으로 기사 목록 추출
+- **봇 디텍션 우회**: User-Agent 로테이션 및 브라우저 핑거프린트 매칭으로 안정적인 스크래핑
 - **URL 수동 스크래핑**: 개별 URL 입력으로 웹 페이지 내용 추출
 - 중복 뉴스 자동 필터링
 - localStorage 기반 로컬 데이터 저장
 
-### 3. AI 기반 컨텐츠 가공
-- **DeepSeek AI 통합**: DeepSeek Reasoner 모델로 고품질 요약 및 콘텐츠 생성
+### 3. AI 기반 컨텐츠 가공 (개선!)
+- **DeepSeek AI 통합**: DeepSeek Chat 모델로 안정적인 요약 및 콘텐츠 생성
 - **3줄 핵심 요약**: 뉴스 수집 시 자동으로 핵심 포인트 3개 추출
+- **Pending 상태 해결**: JSON 추출 개선 및 예외 처리 강화로 "Processing..." 무한 로딩 방지
+- **Full Article 탭**: 원문 자동 스크래핑 후 한국어로 번역 및 포맷팅
 - **카테고리 자동 분류**: product, update, research, announcement 등으로 분류
 - 원문 영어 기사를 자연스러운 한글로 번역 및 요약
 
@@ -58,8 +63,18 @@
 - 플랫폼별로 가공된 컨텐츠를 클릭 한 번으로 클립보드에 복사
 - 바로 소셜 미디어에 게시 가능
 
-### 9. 반응형 UI
+### 9. 다크 모드 지원 (개선!)
+- 라이트/다크 테마 토글 기능
+- 시스템 다크모드 자동 감지
+- FOUC(Flash of Unstyled Content) 방지
+- **부드러운 전환**: border-color 충돌 해결 및 200ms 애니메이션 최적화
+- 아이콘 회전 및 스케일 효과
+
+### 10. 반응형 UI (개선!)
 - 데스크톱, 태블릿, 모바일 모든 화면에 최적화
+- **사이드바 개선**: sources prop 전달로 실시간 소스 목록 표시
+- **News Sources 레이아웃 개선**: Add Source 버튼을 헤더 우측으로 이동
+- **모달 애니메이션 개선**: backdrop-blur 제거로 렉 현상 해결
 - 직관적인 대시보드 인터페이스
 - 실시간 처리 상태 표시
 
@@ -316,8 +331,41 @@ RSS 피드에서 뉴스 목록을 가져옵니다.
 }
 ```
 
+### POST /api/scrape-source
+웹사이트에서 기사 목록을 자동으로 스크래핑합니다 (RSS 없는 소스용).
+
+**Request:**
+```json
+{
+  "url": "https://anthropic.com/news",
+  "scrapeConfig": {
+    "articleSelector": "article",
+    "titleSelector": "h2",
+    "linkSelector": "a[href]",
+    "descriptionSelector": "p",
+    "dateSelector": "time"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "articles": [
+    {
+      "title": "Article Title",
+      "link": "https://...",
+      "description": "...",
+      "pubDate": "2025-01-15"
+    }
+  ],
+  "count": 10,
+  "url": "https://anthropic.com/news"
+}
+```
+
 ### POST /api/openai
-DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지 모드를 지원합니다.
+DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 5가지 모드를 지원합니다.
 
 #### Mode 1: summarize (뉴스 요약)
 뉴스 수집 시 3줄 핵심 요약 및 카테고리 분류
@@ -420,6 +468,27 @@ DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지
 }
 ```
 
+#### Mode 5: translate (기사 번역 및 포맷팅) (NEW!)
+영어 원문을 한국어로 번역하고 읽기 좋게 포맷팅
+
+**Request:**
+```json
+{
+  "mode": "translate",
+  "title": "Article Title",
+  "content": "Full article content in English..."
+}
+```
+
+**Response:**
+```json
+{
+  "title": "Article Title",
+  "content": "한국어로 번역되고 포맷팅된 기사 내용...",
+  "isTranslated": true
+}
+```
+
 ## 사용 방법
 
 ### 1. 뉴스 소스 관리
@@ -468,7 +537,7 @@ DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지
 
 ## 개발 로드맵
 
-### 완료된 기능 (v2.5)
+### 완료된 기능 (v0.3.0)
 - [x] DeepSeek AI 통합 (단일 프로바이더로 단순화)
 - [x] 3줄 핵심 요약 및 카테고리 자동 분류
 - [x] 스타일 템플릿 관리 시스템
@@ -483,23 +552,49 @@ DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 4가지
   - date-fns로 날짜 처리 표준화
   - Sonner를 통한 우아한 토스트 알림
   - 타입 안전 API 클라이언트 구축
-- [x] **아키텍처 단순화** (v2.3)
+- [x] **아키텍처 단순화** (v0.2.0)
   - AI 프로바이더 선택 기능 제거
   - DeepSeek 단일 프로바이더로 통합
   - 코드베이스 822줄 감소
-- [x] **다크 모드 지원** (v2.4)
+- [x] **다크 모드 지원** (v0.2.0)
   - 라이트/다크 테마 토글 기능
   - 시스템 다크모드 자동 감지
   - FOUC(Flash of Unstyled Content) 방지
   - 부드러운 테마 전환 애니메이션
   - 아이콘 회전 및 스케일 효과
-- [x] **뉴스 북마크 기능** (v2.5)
+- [x] **뉴스 북마크 기능** (v0.2.0)
   - 뉴스 카드에서 북마크 토글 (amber 색상 아이콘)
   - 뉴스 상세 모달에서 북마크 추가/제거
   - "Bookmarked" 필터로 북마크된 뉴스만 조회
   - localStorage에 자동 저장 (Zustand persist)
   - Toast 알림으로 즉각 피드백
   - Stats 카드에 북마크 개수 표시
+- [x] **웹 스크래핑 자동화 및 안정성 개선** (v0.3.0)
+  - RSS 없는 소스도 자동으로 기사 목록 추출
+  - 5가지 최신 브라우저 User-Agent 로테이션 (Chrome, Firefox, Safari, Edge)
+  - 브라우저별 핑거프린트 매칭 (Sec-Ch-Ua, Sec-Fetch 헤더 등)
+  - 랜덤 딜레이로 봇 디텍션 우회
+  - Anthropic, Meta AI 등 주요 사이트 기본 스크래핑 설정 제공
+- [x] **AI 요약 안정성 개선** (v0.3.0)
+  - deepseek-reasoner에서 deepseek-chat으로 모델 변경 (더 안정적)
+  - JSON 추출 함수로 응답 파싱 오류 해결
+  - 빈 content 처리 및 기본값 반환으로 Pending 상태 방지
+  - 짧은 content에 대한 예외 처리
+- [x] **Full Article 탭 개선** (v0.3.0)
+  - 원문 자동 스크래핑 기능
+  - AI 기반 한국어 번역 및 포맷팅 (translate 모드)
+  - 로딩 상태 표시 (fetching, translating)
+  - 캐싱으로 중복 요청 방지
+  - 에러 처리 및 재시도 기능
+  - 문단 자동 분리 및 리스트 포맷팅
+- [x] **UI/UX 버그 수정 및 개선** (v0.3.0)
+  - 다크/라이트 모드 전환 시 border-color 충돌 해결
+  - box-sizing 초기화로 레이아웃 안정성 향상
+  - 테마 전환 애니메이션 최적화 (300ms → 200ms)
+  - 모달 블러 애니메이션 제거로 렉 현상 해결
+  - News Sources 페이지 레이아웃 개선 (Add Source 버튼 헤더 우측 배치)
+  - 사이드바 소스 목록 실시간 표시 (sources prop 전달)
+  - 소스 아이콘 개선 (RSS: 주황색 Rss 아이콘, Scraping: 파란색 Globe 아이콘)
 
 ### 향후 개발 계획
 - [ ] 추가 AI 프로바이더 지원 (Claude, GPT 등) - 필요시

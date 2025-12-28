@@ -73,8 +73,10 @@
 }
 
 /* Base Styles */
-* {
-  border-color: var(--border);
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 html {
@@ -306,17 +308,25 @@ body {
 
 /* Smooth color scheme transition for entire page */
 html {
-  transition: background-color 300ms ease, color 300ms ease;
+  color-scheme: light;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
+/* Theme transition - applied temporarily during toggle */
 html.theme-transition,
 html.theme-transition *,
 html.theme-transition *::before,
 html.theme-transition *::after {
-  transition: background-color 300ms ease,
-              border-color 300ms ease,
-              color 300ms ease,
-              box-shadow 300ms ease !important;
+  transition: background-color 200ms ease-out,
+              border-color 200ms ease-out,
+              color 200ms ease-out,
+              fill 200ms ease-out,
+              stroke 200ms ease-out,
+              box-shadow 200ms ease-out !important;
+  transition-delay: 0ms !important;
 }
 
 /* Line Clamp Utilities */
