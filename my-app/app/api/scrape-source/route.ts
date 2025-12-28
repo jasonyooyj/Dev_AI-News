@@ -128,25 +128,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
+    console.log(`[Scrape-Source] Fetching: ${url}`);
+
     // Add small random delay before request
     await randomDelay();
 
     const userAgent = getRandomUserAgent();
     const headers = getRealisticHeaders(userAgent);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     const response = await fetch(url, {
       headers,
-      // Add timeout
-      signal: AbortSignal.timeout(15000),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
+      console.error(`[Scrape-Source] HTTP error: ${response.status}`);
       throw new Error(`Failed to fetch: ${response.status}`);
     }
 
     const html = await response.text();
+    console.log(`[Scrape-Source] Got HTML: ${html.length} chars`);
+
     const $ = cheerio.load(html);
     const config = getConfigForUrl(url, scrapeConfig);
+    console.log(`[Scrape-Source] Using config:`, JSON.stringify(config));
 
     const articles: ScrapedArticle[] = [];
     const seenLinks = new Set<string>();
@@ -239,13 +249,26 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    console.log(`[Scrape-Source] Found ${articles.length} articles`);
+    if (articles.length > 0) {
+      console.log(`[Scrape-Source] First article: ${articles[0].title}`);
+    }
+
     return NextResponse.json({
       articles: articles.slice(0, 20), // Limit to 20 articles
       count: articles.length,
       url,
     });
   } catch (error) {
-    console.error('Source scraping error:', error);
+    console.error('[Scrape-Source] Error:', error);
+
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { error: 'Request timeout - site took too long to respond' },
+        { status: 408 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to scrape source' },
       { status: 500 }

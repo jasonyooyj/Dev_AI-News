@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   ExternalLink,
   Clock,
-  Sparkles,
   FileText,
   Wand2,
   ListChecks,
@@ -294,14 +295,18 @@ function FullArticleTabContent({
   onContentLoaded: (content: string) => void;
 }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [translatedContent, setTranslatedContent] = useState<string | null>(cachedContent || null);
+  const [translatedContent, setTranslatedContent] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState<'fetching' | 'translating'>('fetching');
+  const hasFetchedRef = useRef(false);
+
+  // Use cached content if available
+  const displayContent = cachedContent || translatedContent;
 
   // Fetch and translate full article content
   const fetchAndTranslateArticle = async () => {
-    if (translatedContent) return; // Already loaded
+    if (hasFetchedRef.current || cachedContent) return; // Already loaded or cached
+    hasFetchedRef.current = true;
 
     setIsLoading(true);
     setError(null);
@@ -323,14 +328,14 @@ function FullArticleTabContent({
       const rawContent = scrapeData.content || '';
 
       if (!rawContent || rawContent.length < 50) {
-        setTranslatedContent('콘텐츠를 가져올 수 없습니다. 원문 링크를 확인해주세요.');
-        onContentLoaded('');
+        const fallbackMsg = '콘텐츠를 가져올 수 없습니다. 원문 링크를 확인해주세요.';
+        setTranslatedContent(fallbackMsg);
+        onContentLoaded(fallbackMsg);
         return;
       }
 
       // Step 2: Translate and format
       setLoadingStep('translating');
-      setIsTranslating(true);
 
       const translateResponse = await fetch('/api/openai', {
         method: 'POST',
@@ -350,23 +355,29 @@ function FullArticleTabContent({
       }
 
       const translateData = await translateResponse.json();
-      setTranslatedContent(translateData.content || rawContent);
-      onContentLoaded(translateData.content || rawContent);
+      const finalContent = translateData.content || rawContent;
+      setTranslatedContent(finalContent);
+      onContentLoaded(finalContent);
     } catch (err) {
       setError('기사를 불러오는데 실패했습니다. 원문 링크를 확인해주세요.');
       console.error('Failed to fetch/translate article:', err);
+      hasFetchedRef.current = false; // Allow retry on error
     } finally {
       setIsLoading(false);
-      setIsTranslating(false);
     }
   };
 
+  // Reset ref when URL changes
+  useEffect(() => {
+    hasFetchedRef.current = false;
+  }, [url]);
+
   // Fetch on mount if not cached
   useEffect(() => {
-    if (!cachedContent && !translatedContent) {
+    if (!cachedContent && !translatedContent && !hasFetchedRef.current) {
       fetchAndTranslateArticle();
     }
-  }, [url]);
+  }, [cachedContent, url]);
 
   if (isLoading) {
     return (
@@ -410,46 +421,22 @@ function FullArticleTabContent({
     );
   }
 
-  // Format the content with proper paragraphs
-  const formattedParagraphs = (translatedContent || '')
-    .split(/\n\n+/)
-    .filter(p => p.trim().length > 0);
-
   return (
     <div className="space-y-4">
       {/* Translated badge */}
       <div className="flex items-center gap-2">
         <Badge variant="info" size="sm">
-          🌐 한국어 번역
+          한국어 번역
         </Badge>
       </div>
 
-      {/* Article content with nice formatting */}
-      <div className="bg-zinc-50 dark:bg-zinc-900/50 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800">
-        <div className="space-y-4">
-          {formattedParagraphs.map((paragraph, index) => {
-            // Check if it's a list item
-            if (paragraph.trim().startsWith('•') || paragraph.trim().startsWith('-') || paragraph.trim().match(/^\d+\./)) {
-              const items = paragraph.split(/\n/).filter(item => item.trim());
-              return (
-                <ul key={index} className="list-disc list-inside space-y-2 text-zinc-700 dark:text-zinc-300">
-                  {items.map((item, i) => (
-                    <li key={i} className="leading-relaxed">
-                      {item.replace(/^[•\-\d.]+\s*/, '')}
-                    </li>
-                  ))}
-                </ul>
-              );
-            }
-
-            // Regular paragraph
-            return (
-              <p key={index} className="text-zinc-700 dark:text-zinc-300 leading-relaxed text-[15px]">
-                {paragraph}
-              </p>
-            );
-          })}
-        </div>
+      {/* Article content with Notion-style markdown rendering */}
+      <div className="bg-white dark:bg-zinc-900/80 rounded-lg p-6 md:p-8 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+        <article className="prose">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {displayContent || ''}
+          </ReactMarkdown>
+        </article>
       </div>
 
       {/* Original link */}

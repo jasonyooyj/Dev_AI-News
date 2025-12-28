@@ -1,6 +1,6 @@
 {
   "name": "my-app",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "scripts": {
     "dev": "npx @react-grab/claude-code@latest && next dev",
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.12",
     "cheerio": "^1.1.2",
     "date-fns": "^4.1.0",
@@ -26,6 +27,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.69.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "rss-parser": "^3.13.0",
     "sonner": "^2.0.7",
     "uuid": "^13.0.0",

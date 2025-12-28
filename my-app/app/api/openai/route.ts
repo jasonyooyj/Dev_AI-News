@@ -310,7 +310,7 @@ ${previousContent}
     }
 
     // === MODE: translate ===
-    // 기사 번역 및 포맷팅
+    // 기사 원문 번역 (요약 금지, 원문 충실 번역)
     if (mode === 'translate') {
       const { title, content } = body;
 
@@ -336,29 +336,34 @@ ${previousContent}
         messages: [
           {
             role: 'system',
-            content: `당신은 AI/테크 전문 번역가입니다. 영어 기사를 자연스러운 한국어로 번역하고, 읽기 좋게 포맷팅합니다.
+            content: `당신은 전문 번역가입니다. 원문을 한국어로 **충실하게 직역**합니다.
 
-번역 원칙:
-- 기술 용어는 적절히 한글화하되, 널리 알려진 영어 용어는 유지 (예: API, LLM, GPU)
-- 자연스러운 한국어 문장으로 의역
-- 원문의 의미와 뉘앙스 보존
+## 핵심 원칙
+- **절대 요약하지 않습니다** - 원문의 모든 내용을 빠짐없이 번역
+- **원문 구조 유지** - 문단, 순서, 흐름을 원문 그대로 유지
+- **추가/삭제 금지** - 원문에 없는 내용 추가 금지, 원문 내용 생략 금지
 
-포맷팅 원칙:
-- 문단을 적절히 나누어 가독성 향상
-- 중요한 내용은 강조
-- 리스트가 있으면 정리
-- HTML 태그 사용 금지, 순수 텍스트로만 작성
-- 빈 줄로 문단 구분`,
+## 번역 스타일
+- 기술 용어는 영어 유지 (API, GPU, LLM, AI, ML 등)
+- 자연스러운 한국어 문장으로 번역하되 의미 변형 금지
+- 고유명사(회사명, 제품명, 인명)는 원문 유지
+
+## 출력 포맷 (Markdown)
+- 제목이 있으면 ## 헤딩 사용
+- 문단 사이 빈 줄로 구분
+- 리스트는 - 또는 1. 2. 3. 형식
+- 중요 키워드는 **볼드** 처리
+- 인용문은 > 사용
+- 코드나 기술 용어는 \`backtick\` 사용`,
           },
           {
             role: 'user',
-            content: `다음 기사를 한국어로 번역하고 읽기 좋게 포맷팅해주세요:
+            content: `다음 기사를 한국어로 번역해주세요. 요약하지 말고 원문 전체를 충실히 번역하세요.
 
-${title ? `제목: ${title}\n\n` : ''}내용:
-${trimmedContent.substring(0, 8000)}`,
+${title ? `## ${title}\n\n` : ''}${trimmedContent.substring(0, 10000)}`,
           },
         ],
-        temperature: 0.3,
+        temperature: 0.2,
       });
 
       const translatedContent = completion.choices[0].message.content || trimmedContent;

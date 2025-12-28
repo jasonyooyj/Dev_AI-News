@@ -79,36 +79,90 @@ export function useNews() {
     async (newsItem: NewsItem) => {
       if (newsItem.quickSummary) return newsItem;
 
+      console.log(`[Summary] Starting for: ${newsItem.title}`);
+
       try {
+        let content = newsItem.originalContent || '';
+        console.log(`[Summary] Original content length: ${content.length}`);
+
+        // If content is too short, try to scrape the full article
+        if (content.trim().length < 200 && newsItem.url) {
+          console.log(`[Summary] Content too short, scraping: ${newsItem.url}`);
+          try {
+            const scrapeResponse = await fetch('/api/scrape', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: newsItem.url }),
+            });
+
+            if (scrapeResponse.ok) {
+              const scrapeData = await scrapeResponse.json();
+              console.log(`[Summary] Scraped content length: ${scrapeData.content?.length || 0}`);
+
+              if (scrapeData.content && scrapeData.content.length > content.length) {
+                content = scrapeData.content;
+                // Update the news item with the full content
+                useNewsStore.getState().updateNewsItem(newsItem.id, {
+                  originalContent: content,
+                });
+              }
+            } else {
+              console.error(`[Summary] Scrape failed with status: ${scrapeResponse.status}`);
+            }
+          } catch (e) {
+            console.error('[Summary] Scrape error:', e);
+          }
+        }
+
+        // If still no content, use title as fallback
+        if (!content || content.trim().length < 50) {
+          console.log('[Summary] Using title as content fallback');
+          content = newsItem.title;
+        }
+
+        console.log(`[Summary] Final content length: ${content.length}, calling API...`);
+
         await summarizeMutation.mutateAsync({
           newsId: newsItem.id,
           title: newsItem.title,
-          content: newsItem.originalContent,
+          content: content,
         });
+
+        console.log(`[Summary] Success for: ${newsItem.title}`);
         // Return updated item from store
         return useNewsStore.getState().newsItems.find((n) => n.id === newsItem.id) || null;
-      } catch {
+      } catch (error) {
+        console.error(`[Summary] Failed for ${newsItem.title}:`, error);
         return null;
       }
     },
     [summarizeMutation]
   );
 
-  // Generate summaries for multiple items
+  // Generate summaries for multiple items (parallel with batching)
   const generateSummariesForItems = useCallback(
     async (items: NewsItem[]) => {
-      for (const item of items) {
-        if (!item.quickSummary) {
-          try {
-            await generateSummary(item);
-            // Small delay between API calls to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 500));
-          } catch (error) {
-            console.error(`Failed to summarize ${item.title}:`, error);
-            // Continue with next item even if one fails
-          }
+      const itemsToSummarize = items.filter(item => !item.quickSummary);
+      console.log(`[Summary] Processing ${itemsToSummarize.length} items in parallel batches`);
+
+      // Process in batches of 3 for better speed while avoiding rate limits
+      const batchSize = 3;
+      for (let i = 0; i < itemsToSummarize.length; i += batchSize) {
+        const batch = itemsToSummarize.slice(i, i + batchSize);
+        console.log(`[Summary] Batch ${Math.floor(i / batchSize) + 1}: ${batch.length} items`);
+
+        // Process batch in parallel
+        await Promise.allSettled(
+          batch.map(item => generateSummary(item))
+        );
+
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < itemsToSummarize.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
+
+      console.log(`[Summary] All batches complete`);
     },
     [generateSummary]
   );

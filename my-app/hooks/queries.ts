@@ -108,51 +108,81 @@ export function useFetchRss() {
 
   return useMutation({
     mutationFn: async ({ source }: { source: Source }) => {
+      console.log(`[Fetch] Starting fetch for: ${source.name}`);
+
       // If source has RSS, use RSS feed
       if (source.rssUrl) {
+        console.log(`[Fetch] Using RSS: ${source.rssUrl}`);
         const result = await api.rss.fetch(source.rssUrl);
+        console.log(`[Fetch] Got ${result.items.length} items from RSS`);
+
         return {
           source,
-          items: result.items.map(item => ({
-            title: item.title,
-            link: item.link,
-            content: item.content || item.contentSnippet || '',
-            pubDate: item.isoDate || item.pubDate,
-          }))
+          items: result.items.map(item => {
+            // Try multiple content sources
+            let content = item.content || item.contentSnippet || '';
+
+            // Log for debugging
+            console.log(`[Fetch] Item: ${item.title?.substring(0, 50)}... | content length: ${content.length}`);
+
+            return {
+              title: item.title,
+              link: item.link,
+              content,
+              pubDate: item.isoDate || item.pubDate,
+            };
+          })
         };
       }
 
       // Otherwise, scrape the website
-      const result = await api.scrape.fetchSource(source.websiteUrl, source.scrapeConfig);
+      console.log(`[Fetch] Using scraping for: ${source.websiteUrl}`);
 
-      // For scraped articles, fetch content sequentially with delays to avoid bot detection
-      const itemsWithContent = [];
-      const articlesToFetch = result.articles.slice(0, 5); // Limit to 5 to reduce load
+      try {
+        const result = await api.scrape.fetchSource(source.websiteUrl, source.scrapeConfig);
+        console.log(`[Fetch] Scrape found ${result.articles?.length || 0} articles`);
 
-      for (const article of articlesToFetch) {
-        try {
-          // Random delay between 1-3 seconds between requests
-          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-
-          const scraped = await api.scrape.fetch(article.link);
-          itemsWithContent.push({
-            title: article.title,
-            link: article.link,
-            content: scraped.content || article.description || '',
-            pubDate: article.pubDate,
-          });
-        } catch {
-          // If scraping fails, still add the article with description as content
-          itemsWithContent.push({
-            title: article.title,
-            link: article.link,
-            content: article.description || '',
-            pubDate: article.pubDate,
-          });
+        if (!result.articles || result.articles.length === 0) {
+          console.log('[Fetch] No articles found from scraping');
+          return { source, items: [] };
         }
-      }
 
-      return { source, items: itemsWithContent };
+        // For scraped articles, fetch content sequentially with delays to avoid bot detection
+        const itemsWithContent = [];
+        const articlesToFetch = result.articles.slice(0, 5); // Limit to 5 to reduce load
+
+        for (const article of articlesToFetch) {
+          console.log(`[Fetch] Processing: ${article.title?.substring(0, 50)}...`);
+          try {
+            // Random delay between 1-3 seconds between requests
+            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+            const scraped = await api.scrape.fetch(article.link);
+            console.log(`[Fetch] Scraped content length: ${scraped.content?.length || 0}`);
+
+            itemsWithContent.push({
+              title: article.title,
+              link: article.link,
+              content: scraped.content || article.description || '',
+              pubDate: article.pubDate,
+            });
+          } catch (err) {
+            console.error(`[Fetch] Failed to scrape article: ${article.link}`, err);
+            // If scraping fails, still add the article with description as content
+            itemsWithContent.push({
+              title: article.title,
+              link: article.link,
+              content: article.description || '',
+              pubDate: article.pubDate,
+            });
+          }
+        }
+
+        return { source, items: itemsWithContent };
+      } catch (err) {
+        console.error(`[Fetch] Scrape source failed:`, err);
+        throw err;
+      }
     },
     onSuccess: ({ source, items }) => {
       let addedCount = 0;

@@ -2,7 +2,7 @@
 
 > 최신 AI 기술 뉴스를 수집하고, DeepSeek AI를 활용하여 한글로 요약 및 소셜 미디어 플랫폼별로 포맷팅하는 웹 애플리케이션
 
-![Version](https://img.shields.io/badge/version-0.3.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.3.1-blue?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19.2.3-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
@@ -16,9 +16,14 @@
 - RSS 피드 URL 지원
 - 소스별 활성화/비활성화 관리
 
-### 2. 자동 뉴스 수집 (NEW!)
-- **RSS 피드 자동 수집**: 등록된 소스의 RSS 피드에서 최신 뉴스 자동 파싱
-- **웹 스크래핑 자동화**: RSS가 없는 소스도 자동으로 기사 목록 추출
+### 2. 자동 뉴스 수집 (개선!)
+- **RSS 피드 자동 수집**:
+  - 등록된 소스의 RSS 피드에서 최신 뉴스 자동 파싱
+  - description, summary, content:encoded 등 다중 필드 지원
+  - HTML 태그 자동 제거 및 텍스트 정리
+- **웹 스크래핑 자동화**:
+  - RSS가 없는 소스도 자동으로 기사 목록 추출
+  - 8초 타임아웃으로 속도 개선
 - **봇 디텍션 우회**: User-Agent 로테이션 및 브라우저 핑거프린트 매칭으로 안정적인 스크래핑
 - **URL 수동 스크래핑**: 개별 URL 입력으로 웹 페이지 내용 추출
 - 중복 뉴스 자동 필터링
@@ -26,9 +31,12 @@
 
 ### 3. AI 기반 컨텐츠 가공 (개선!)
 - **DeepSeek AI 통합**: DeepSeek Chat 모델로 안정적인 요약 및 콘텐츠 생성
-- **3줄 핵심 요약**: 뉴스 수집 시 자동으로 핵심 포인트 3개 추출
+- **3줄 핵심 요약**: 뉴스 수집 시 자동으로 핵심 포인트 3개 추출 (배치 병렬 처리로 속도 개선)
 - **Pending 상태 해결**: JSON 추출 개선 및 예외 처리 강화로 "Processing..." 무한 로딩 방지
-- **Full Article 탭**: 원문 자동 스크래핑 후 한국어로 번역 및 포맷팅
+- **Full Article 탭**:
+  - 원문 자동 스크래핑 후 한국어로 번역 (원문 충실 번역, 요약 금지)
+  - Notion 스타일 마크다운 렌더링 (react-markdown + remark-gfm)
+  - 캐싱으로 중복 fetch 방지 (hasFetchedRef)
 - **카테고리 자동 분류**: product, update, research, announcement 등으로 분류
 - 원문 영어 기사를 자연스러운 한글로 번역 및 요약
 
@@ -92,6 +100,8 @@
 - **Zod** - 스키마 기반 타입 안전 유효성 검사
 - **date-fns** - 날짜/시간 포맷팅 및 유틸리티
 - **Sonner** - 토스트 알림 UI
+- **react-markdown** - 마크다운 렌더링
+- **remark-gfm** - GitHub Flavored Markdown 지원
 
 ### Backend & API
 - **Next.js API Routes** - 서버리스 API 엔드포인트
@@ -536,6 +546,34 @@ DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 5가지
 2. 필요시 추가 편집 후 게시
 
 ## 개발 로드맵
+
+### 완료된 기능 (v0.3.1)
+- [x] **Full Article 탭 캐싱 개선** (v0.3.1)
+  - hasFetchedRef를 사용한 중복 fetch 방지
+  - URL 변경 시 자동 초기화
+  - 에러 발생 시 재시도 가능하도록 개선
+- [x] **Full Article 번역 프롬프트 개선** (v0.3.1)
+  - 원문 충실 번역 강조 (요약 금지)
+  - 마크다운 포맷으로 출력
+  - 온도 0.2로 낮춰 일관성 향상
+- [x] **Notion 스타일 마크다운 렌더링** (v0.3.1)
+  - react-markdown + remark-gfm 라이브러리 추가
+  - Notion과 유사한 타이포그래피 및 스타일링
+  - 라이트/다크 모드 모두 지원
+  - 코드 블록, 테이블, 리스트, 인용문 등 완벽 지원
+- [x] **스크래핑 속도 개선** (v0.3.1)
+  - 타임아웃 15초 → 8초로 단축
+  - 더 빠른 사용자 피드백
+- [x] **RSS 파싱 개선** (v0.3.1)
+  - description, summary, content:encoded 필드 추가 지원
+  - HTML 태그 제거 함수로 깨끗한 텍스트 추출
+  - 이미지 태그 완전 제거
+- [x] **요약 배치 병렬 처리** (v0.3.1)
+  - 3개씩 배치로 묶어 병렬 요청
+  - 전체 요약 시간 단축
+- [x] **디버깅 로그 추가** (v0.3.1)
+  - RSS, 스크래핑, 요약 등 주요 단계별 로그
+  - 개발 및 디버깅 편의성 향상
 
 ### 완료된 기능 (v0.3.0)
 - [x] DeepSeek AI 통합 (단일 프로바이더로 단순화)
