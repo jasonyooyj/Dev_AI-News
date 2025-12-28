@@ -112,7 +112,7 @@ export function UrlScraper({ onScrape, onSave }: UrlScraperProps) {
 
   return (
     <Card variant="default" padding="none">
-      <CardHeader className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+      <CardHeader className="p-3 sm:p-4 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
             <Link2 className="w-5 h-5" />
@@ -126,10 +126,10 @@ export function UrlScraper({ onScrape, onSave }: UrlScraperProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-4">
+      <CardContent className="p-3 sm:p-4">
         <form onSubmit={handleScrape} className="space-y-4">
           {/* URL Input */}
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1">
               <Input
                 placeholder="https://example.com/article"

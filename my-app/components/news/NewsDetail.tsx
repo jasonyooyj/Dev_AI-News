@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { Card } from '@/components/ui/Card';
+import { useNewsStore } from '@/store';
 import { PlatformPreview } from '@/components/social/PlatformPreview';
 import { FeedbackButtons } from '@/components/social/FeedbackButtons';
 import {
@@ -282,30 +283,29 @@ function SummaryTabContent({ quickSummary }: { quickSummary?: QuickSummary }) {
   );
 }
 
-// Full Article Tab Content
+// Full Article Tab Content - uses store for persistent caching
 function FullArticleTabContent({
   url,
   title,
-  cachedContent,
-  onContentLoaded,
+  savedTranslation,
+  onSaveTranslation,
 }: {
   url: string;
   title: string;
-  cachedContent?: string;
-  onContentLoaded: (content: string) => void;
+  savedTranslation?: string;  // From store (persistent)
+  onSaveTranslation: (content: string) => void;  // Save to store
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [translatedContent, setTranslatedContent] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState<'fetching' | 'translating'>('fetching');
   const hasFetchedRef = useRef(false);
 
-  // Use cached content if available
-  const displayContent = cachedContent || translatedContent;
+  // Use saved translation if available
+  const displayContent = savedTranslation;
 
   // Fetch and translate full article content
   const fetchAndTranslateArticle = async () => {
-    if (hasFetchedRef.current || cachedContent) return; // Already loaded or cached
+    if (hasFetchedRef.current || savedTranslation) return; // Already loaded or saved
     hasFetchedRef.current = true;
 
     setIsLoading(true);
@@ -329,8 +329,7 @@ function FullArticleTabContent({
 
       if (!rawContent || rawContent.length < 50) {
         const fallbackMsg = '콘텐츠를 가져올 수 없습니다. 원문 링크를 확인해주세요.';
-        setTranslatedContent(fallbackMsg);
-        onContentLoaded(fallbackMsg);
+        onSaveTranslation(fallbackMsg);
         return;
       }
 
@@ -348,16 +347,15 @@ function FullArticleTabContent({
       });
 
       if (!translateResponse.ok) {
-        // If translation fails, show raw content
-        setTranslatedContent(rawContent);
-        onContentLoaded(rawContent);
+        // If translation fails, save raw content
+        onSaveTranslation(rawContent);
         return;
       }
 
       const translateData = await translateResponse.json();
       const finalContent = translateData.content || rawContent;
-      setTranslatedContent(finalContent);
-      onContentLoaded(finalContent);
+      // Save to store for persistence
+      onSaveTranslation(finalContent);
     } catch (err) {
       setError('기사를 불러오는데 실패했습니다. 원문 링크를 확인해주세요.');
       console.error('Failed to fetch/translate article:', err);
@@ -372,12 +370,12 @@ function FullArticleTabContent({
     hasFetchedRef.current = false;
   }, [url]);
 
-  // Fetch on mount if not cached
+  // Fetch on mount if not saved
   useEffect(() => {
-    if (!cachedContent && !translatedContent && !hasFetchedRef.current) {
+    if (!savedTranslation && !hasFetchedRef.current) {
       fetchAndTranslateArticle();
     }
-  }, [cachedContent, url]);
+  }, [savedTranslation, url]);
 
   if (isLoading) {
     return (
@@ -431,7 +429,7 @@ function FullArticleTabContent({
       </div>
 
       {/* Article content with Notion-style markdown rendering */}
-      <div className="bg-white dark:bg-zinc-900/80 rounded-lg p-6 md:p-8 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+      <div className="bg-white dark:bg-zinc-900/80 rounded-lg p-4 sm:p-6 md:p-8 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
         <article className="prose">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {displayContent || ''}
@@ -599,18 +597,24 @@ export function NewsDetail({
   const [activeTab, setActiveTab] = useState<TabType>('summary');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('twitter');
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Partial<Record<Platform, string>>>({});
-  const [fullArticleContent, setFullArticleContent] = useState<string | undefined>(undefined);
+
+  // Get save function from store
+  const saveTranslation = useNewsStore((s) => s.saveTranslation);
 
   const platforms = Object.keys(PLATFORM_CONFIGS) as Platform[];
   const isBookmarked = news?.isBookmarked ?? false;
 
-  // Reset full article content when news changes
+  // Reset tab when news changes
   useEffect(() => {
-    setFullArticleContent(undefined);
     setActiveTab('summary');
   }, [news?.id]);
 
   if (!news) return null;
+
+  // Handler to save translation to store
+  const handleSaveTranslation = (content: string) => {
+    saveTranslation(news.id, content);
+  };
 
   const handleGenerate = async () => {
     const templateId = selectedTemplateIds[selectedPlatform];
@@ -667,7 +671,7 @@ export function NewsDetail({
 
         {/* Tabs */}
         <div className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto">
             <Tab
               id="summary"
               label="Summary"
@@ -701,8 +705,8 @@ export function NewsDetail({
           <FullArticleTabContent
             url={news.url}
             title={news.title}
-            cachedContent={fullArticleContent}
-            onContentLoaded={setFullArticleContent}
+            savedTranslation={news.translatedContent}
+            onSaveTranslation={handleSaveTranslation}
           />
         )}
 

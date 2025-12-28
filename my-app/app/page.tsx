@@ -226,7 +226,7 @@ export default function DashboardPage() {
     <MainLayout sources={sources}>
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">{newsItems.length}</div>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 border-b border-border pb-2">
+        <div className="flex gap-1.5 sm:gap-2 border-b border-border pb-2">
           <Button
             variant={activeTab === 'news' ? 'primary' : 'ghost'}
             onClick={() => setActiveTab('news')}

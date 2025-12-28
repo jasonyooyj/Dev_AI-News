@@ -13,6 +13,7 @@ interface NewsState {
   setNewsItems: (items: NewsItem[]) => void;
   addSummary: (id: string, summary: QuickSummary) => void;
   toggleBookmark: (id: string) => void;
+  saveTranslation: (id: string, translatedContent: string) => void;
 }
 
 export const useNewsStore = create<NewsState>()(
@@ -62,6 +63,16 @@ export const useNewsStore = create<NewsState>()(
         set((state) => ({
           newsItems: state.newsItems.map((item) =>
             item.id === id ? { ...item, isBookmarked: !item.isBookmarked } : item
+          ),
+        }));
+      },
+
+      saveTranslation: (id, translatedContent) => {
+        set((state) => ({
+          newsItems: state.newsItems.map((item) =>
+            item.id === id
+              ? { ...item, translatedContent, translatedAt: new Date().toISOString() }
+              : item
           ),
         }));
       },

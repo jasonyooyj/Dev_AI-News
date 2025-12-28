@@ -166,7 +166,7 @@ export function NewsList({
 
       {/* Filter Options */}
       {showFilters && (
-        <div className="flex flex-wrap gap-3 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="flex flex-wrap gap-3 p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Status

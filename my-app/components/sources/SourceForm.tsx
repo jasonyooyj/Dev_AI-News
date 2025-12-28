@@ -94,7 +94,7 @@ export function SourceForm({
       }
       size="md"
     >
-      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4 sm:space-y-5">
         <Input
           label="Source Name"
           placeholder="e.g., TechCrunch AI News"
@@ -140,7 +140,7 @@ export function SourceForm({
           helperText="Optional: Add an RSS feed URL for automatic fetching"
         />
 
-        <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-200 dark:border-zinc-800">
           <div>
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
               Active Status

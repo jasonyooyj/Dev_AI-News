@@ -51,6 +51,8 @@ export interface NewsItem {
   isBookmarked?: boolean;  // 북마크 여부
   createdAt: string;
   quickSummary?: QuickSummary;  // 3줄 핵심 요약
+  translatedContent?: string;   // 번역된 전체 기사 (캐시)
+  translatedAt?: string;        // 번역 시간
 }
 
 export interface PlatformContent {

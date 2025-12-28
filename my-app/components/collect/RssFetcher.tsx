@@ -80,7 +80,7 @@ export function RssFetcher({
 
   return (
     <Card variant="default" padding="none">
-      <CardHeader className="p-4 border-b border-zinc-200 dark:border-zinc-800">
+      <CardHeader className="p-3 sm:p-4 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
             <Rss className="w-5 h-5" />
@@ -103,7 +103,7 @@ export function RssFetcher({
         </Button>
       </CardHeader>
 
-      <CardContent className="p-4">
+      <CardContent className="p-3 sm:p-4">
         {rssSources.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
             <div className="p-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
@@ -129,7 +129,7 @@ export function RssFetcher({
                 return (
                   <div
                     key={source.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800"
                   >
                     <div className="flex items-center gap-3">
                       <Rss className="w-4 h-4 text-orange-500" />
@@ -137,7 +137,7 @@ export function RssFetcher({
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           {source.name}
                         </p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[200px]">
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[120px] sm:max-w-[200px]">
                           {source.rssUrl}
                         </p>
                       </div>
@@ -175,7 +175,7 @@ export function RssFetcher({
 
             {/* Results Summary */}
             {showResults && results.length > 0 && (
-              <div className="mt-4 p-4 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
+              <div className="mt-4 p-3 sm:p-4 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                     Fetch Results
@@ -192,7 +192,7 @@ export function RssFetcher({
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-4 mb-3">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     <span className="text-sm text-zinc-700 dark:text-zinc-300">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SourceList } from '@/components/sources/SourceList';
@@ -8,7 +8,11 @@ import { SourceForm } from '@/components/sources/SourceForm';
 import { useSources } from '@/hooks/useSources';
 import { Source } from '@/types/news';
 
-export default function SourcesPage() {
+// Force dynamic rendering to prevent prerendering errors
+// This page uses useSearchParams() and localStorage which are client-only
+export const dynamic = 'force-dynamic';
+
+function SourcesPageContent() {
   const { sources, isLoading, addSource, updateSource, deleteSource, toggleSource } = useSources();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSource, setEditingSource] = useState<Source | null>(null);
@@ -90,5 +94,19 @@ export default function SourcesPage() {
         />
       </div>
     </MainLayout>
+  );
+}
+
+export default function SourcesPage() {
+  return (
+    <Suspense fallback={
+      <MainLayout sources={[]}>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    }>
+      <SourcesPageContent />
+    </Suspense>
   );
 }

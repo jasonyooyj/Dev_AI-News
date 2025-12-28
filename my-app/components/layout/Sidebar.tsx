@@ -81,7 +81,7 @@ export function Sidebar({
         className={`
           fixed lg:sticky top-0 left-0 z-40 lg:z-30
           h-screen lg:h-[calc(100vh-4rem)]
-          w-72 lg:w-64
+          w-[280px] lg:w-64
           bg-white dark:bg-zinc-950
           border-r border-zinc-200 dark:border-zinc-800
           transform transition-transform duration-300 ease-in-out

@@ -40,7 +40,7 @@ export function MainLayout({
         />
 
         <main className="flex-1 min-h-[calc(100vh-4rem)] overflow-x-hidden">
-          <div className="container mx-auto px-4 md:px-6 py-6 max-w-7xl">
+          <div className="container mx-auto px-3 sm:px-4 md:px-6 py-6 max-w-7xl">
             {children}
           </div>
         </main>

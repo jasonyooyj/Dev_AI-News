@@ -258,9 +258,9 @@ export function SourceList({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
               News Sources
             </h2>
@@ -272,7 +272,7 @@ export function SourceList({
             Manage your AI news sources. Add RSS feeds or websites to collect news from.
           </p>
         </div>
-        <Button onClick={() => onAdd?.()}>
+        <Button onClick={() => onAdd?.()} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Add Source
         </Button>

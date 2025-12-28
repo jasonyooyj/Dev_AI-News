@@ -79,7 +79,7 @@ export const NewsCard = memo(function NewsCard({
       padding="none"
       className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden"
     >
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
