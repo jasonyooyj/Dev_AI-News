@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Newspaper,
   LayoutDashboard,
@@ -11,8 +11,12 @@ import {
   Moon,
   Menu,
   X,
+  User,
+  LogOut,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useAuthContext } from '@/components/auth/AuthProvider';
 
 interface NavItem {
   label: string;
@@ -40,9 +44,35 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, profile, signOut, loading: authLoading } = useAuthContext();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setIsUserMenuOpen(false);
+      router.push('/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -132,7 +162,7 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
           })}
         </nav>
 
-        {/* Right: Theme Toggle */}
+        {/* Right: Theme Toggle & User Menu */}
         <div className="flex items-center gap-2">
           {mounted && (
             <button
@@ -170,6 +200,64 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
                 />
               </span>
             </button>
+          )}
+
+          {/* User Menu */}
+          {mounted && !authLoading && user && (
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={profile?.displayName || 'User'}
+                    className="w-7 h-7 rounded-full"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                    {(profile?.displayName || user.email || 'U')[0].toUpperCase()}
+                  </div>
+                )}
+                <span className="hidden sm:block text-sm font-medium text-zinc-700 dark:text-zinc-300 max-w-[100px] truncate">
+                  {profile?.displayName || user.email?.split('@')[0]}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-800 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700 py-1 z-50">
+                  <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                      {profile?.displayName || 'User'}
+                    </p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Login Button (when not authenticated) */}
+          {mounted && !authLoading && !user && (
+            <Link
+              href="/login"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+            >
+              <User className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign In</span>
+            </Link>
           )}
         </div>
       </div>

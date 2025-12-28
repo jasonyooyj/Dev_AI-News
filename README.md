@@ -2,7 +2,7 @@
 
 > 최신 AI 기술 뉴스를 수집하고, DeepSeek AI를 활용하여 한글로 요약 및 소셜 미디어 플랫폼별로 포맷팅하는 웹 애플리케이션
 
-![Version](https://img.shields.io/badge/version-0.3.1-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.4.0-blue?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19.2.3-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
@@ -10,13 +10,23 @@
 
 ## 주요 기능
 
-### 1. 뉴스 소스 관리
+### 1. Firebase 기반 인증 및 데이터 동기화 (NEW!)
+- **Google 소셜 로그인**: 구글 계정으로 간편 로그인
+- **이메일/비밀번호 인증**: 전통적인 회원가입 및 로그인
+- **실시간 데이터 동기화**: Firestore를 통한 모든 디바이스 간 실시간 동기화
+- **오프라인 지원**: IndexedDB 캐싱으로 오프라인에서도 데이터 접근
+- **자동 마이그레이션**: 기존 localStorage 데이터를 Firestore로 자동 이전
+- **보호된 라우트**: 인증된 사용자만 대시보드 및 소스 페이지 접근 가능
+
+### 2. 뉴스 소스 관리
 - OpenAI, Google AI, Hugging Face 등 주요 AI 기업의 블로그를 기본 소스로 제공
+- **추가 소스**: DeepMind, NVIDIA, Microsoft, AWS, MIT Tech Review, The Verge, VentureBeat, The Decoder
 - 사용자 정의 뉴스 소스 추가/수정/삭제
 - RSS 피드 URL 지원
 - 소스별 활성화/비활성화 관리
+- **중복 소스 자동 감지 및 제거**: 동일한 URL의 소스 방지
 
-### 2. 자동 뉴스 수집 (개선!)
+### 3. 자동 뉴스 수집 (개선!)
 - **RSS 피드 자동 수집**:
   - 등록된 소스의 RSS 피드에서 최신 뉴스 자동 파싱
   - description, summary, content:encoded 등 다중 필드 지원
@@ -27,9 +37,9 @@
 - **봇 디텍션 우회**: User-Agent 로테이션 및 브라우저 핑거프린트 매칭으로 안정적인 스크래핑
 - **URL 수동 스크래핑**: 개별 URL 입력으로 웹 페이지 내용 추출
 - 중복 뉴스 자동 필터링
-- localStorage 기반 로컬 데이터 저장
+- Firestore 기반 클라우드 데이터 저장 및 동기화
 
-### 3. AI 기반 컨텐츠 가공 (개선!)
+### 4. AI 기반 컨텐츠 가공 (개선!)
 - **DeepSeek AI 통합**: DeepSeek Chat 모델로 안정적인 요약 및 콘텐츠 생성
 - **3줄 핵심 요약**: 뉴스 수집 시 자동으로 핵심 포인트 3개 추출 (배치 병렬 처리로 속도 개선)
 - **Pending 상태 해결**: JSON 추출 개선 및 예외 처리 강화로 "Processing..." 무한 로딩 방지
@@ -40,7 +50,7 @@
 - **카테고리 자동 분류**: product, update, research, announcement 등으로 분류
 - 원문 영어 기사를 자연스러운 한글로 번역 및 요약
 
-### 4. 소셜 미디어 포맷팅
+### 5. 소셜 미디어 포맷팅
 각 플랫폼의 특성에 맞춰 자동으로 포맷팅:
 
 - **X (Twitter)**: 280자 이내, 해시태그 1-2개 포함
@@ -48,37 +58,38 @@
 - **Instagram**: 이모지 활용, 해시태그 5-10개
 - **LinkedIn**: 전문적이고 인사이트 있는 내용
 
-### 5. 스타일 템플릿 관리 (NEW!)
+### 6. 스타일 템플릿 관리
 - **AI 기반 문체 분석**: 예시 텍스트를 AI로 분석하여 톤과 특성 자동 추출
 - **플랫폼별 맞춤 템플릿**: 각 소셜 미디어 플랫폼에 맞는 문체 템플릿 저장
 - **기본 템플릿 설정**: 플랫폼별 기본 템플릿 지정으로 일관성 있는 콘텐츠 생성
 - **예시 기반 학습**: 3-5개 예시 텍스트로 사용자 고유의 문체 학습
+- Firestore에 저장되어 모든 디바이스에서 동일한 템플릿 사용 가능
 
-### 6. 피드백 및 재생성 시스템 (NEW!)
+### 7. 피드백 및 재생성 시스템
 - **즉시 피드백**: 생성된 콘텐츠에 대해 좋아요/싫어요 피드백 제공
 - **빠른 피드백 옵션**: "너무 형식적", "더 전문적으로", "해시태그 더 많이" 등 8가지 옵션
 - **맞춤 재생성**: 피드백을 반영하여 AI가 콘텐츠 즉시 재생성
 - **반복 개선**: 만족할 때까지 피드백과 재생성 반복 가능
 
-### 7. 북마크 기능 (NEW!)
+### 8. 북마크 기능
 - **즉시 북마크**: 뉴스 카드와 상세 모달에서 클릭 한 번으로 북마크 토글
 - **빠른 필터링**: "Bookmarked" 필터로 중요한 뉴스만 조회
 - **시각적 표시**: 북마크된 뉴스는 amber 색상 아이콘으로 표시
-- **자동 저장**: localStorage에 즉시 저장되어 새로고침 후에도 유지
+- **자동 저장**: Firestore에 즉시 저장되어 모든 디바이스에서 동기화
 - **즉각 피드백**: Toast 알림으로 북마크 추가/제거 확인
 
-### 8. 원클릭 복사 기능
+### 9. 원클릭 복사 기능
 - 플랫폼별로 가공된 컨텐츠를 클릭 한 번으로 클립보드에 복사
 - 바로 소셜 미디어에 게시 가능
 
-### 9. 다크 모드 지원 (개선!)
+### 10. 다크 모드 지원 (개선!)
 - 라이트/다크 테마 토글 기능
 - 시스템 다크모드 자동 감지
 - FOUC(Flash of Unstyled Content) 방지
 - **부드러운 전환**: border-color 충돌 해결 및 200ms 애니메이션 최적화
 - 아이콘 회전 및 스케일 효과
 
-### 10. 반응형 UI (개선!)
+### 11. 반응형 UI (개선!)
 - 데스크톱, 태블릿, 모바일 모든 화면에 최적화
 - **사이드바 개선**: sources prop 전달로 실시간 소스 목록 표시
 - **News Sources 레이아웃 개선**: Add Source 버튼을 헤더 우측으로 이동
@@ -108,10 +119,13 @@
 - **DeepSeek API** - DeepSeek Reasoner 모델 (추론 특화, 비용 효율적)
 - **RSS Parser** - RSS 피드 파싱
 - **Cheerio** - HTML 스크래핑 및 파싱
+- **Firebase 12.7.0** - 인증 및 데이터베이스
 
-### Data Storage
-- **localStorage** - 브라우저 로컬 저장소 활용
-- 서버 없이 클라이언트 측에서 모든 데이터 관리
+### Data Storage & Auth
+- **Firebase Authentication** - Google OAuth 및 이메일/비밀번호 인증
+- **Cloud Firestore** - NoSQL 클라우드 데이터베이스, 실시간 동기화
+- **Firestore Offline Persistence** - IndexedDB를 통한 오프라인 캐싱
+- **Security Rules** - 사용자별 데이터 격리 및 보안 규칙
 
 ## 설치 및 실행
 
@@ -140,15 +154,33 @@ pnpm install
 ```env
 # DeepSeek API 키 (필수)
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+# Firebase 설정 (필수)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# 선택사항: Firebase Emulator 사용 (개발 환경)
+NEXT_PUBLIC_USE_FIREBASE_EMULATOR=false
 ```
 
-**API 키 발급 방법:**
-- DeepSeek API 키: [DeepSeek Platform](https://platform.deepseek.com/)에서 발급
+**API 키 및 Firebase 설정 방법:**
 
-**DeepSeek 선택 이유:**
-- **비용 효율성**: GPT 대비 저렴한 API 비용
-- **추론 특화**: deepseek-reasoner 모델로 요약/분석에 최적화
-- **OpenAI 호환**: 기존 OpenAI SDK 그대로 사용 가능
+1. **DeepSeek API 키**: [DeepSeek Platform](https://platform.deepseek.com/)에서 발급
+   - **비용 효율성**: GPT 대비 저렴한 API 비용
+   - **추론 특화**: deepseek-reasoner 모델로 요약/분석에 최적화
+   - **OpenAI 호환**: 기존 OpenAI SDK 그대로 사용 가능
+
+2. **Firebase 프로젝트 설정**: [Firebase Console](https://console.firebase.google.com/)
+   - 새 프로젝트 생성 또는 기존 프로젝트 선택
+   - 프로젝트 설정 > 일반 탭에서 웹 앱 추가
+   - Firebase SDK 설정 정보를 `.env.local`에 복사
+   - Authentication > Sign-in method에서 Google 및 이메일/비밀번호 활성화
+   - Firestore Database 생성 (테스트 모드 또는 프로덕션 모드)
+   - `firestore.rules` 파일을 Firebase Console에 배포 (보안 규칙)
 
 ### 5. 개발 서버 실행
 ```bash
@@ -173,13 +205,15 @@ npm start
 my-app/
 ├── app/
 │   ├── api/
-│   │   ├── rss/route.ts          # RSS 피드 파싱 API
+│   │   ├── rss/route.ts           # RSS 피드 파싱 API
 │   │   ├── scrape/route.ts        # URL 스크래핑 API
-│   │   └── openai/route.ts        # OpenAI 요약/포맷팅 API (4가지 모드)
-│   ├── sources/page.tsx           # 소스 관리 페이지
+│   │   └── openai/route.ts        # OpenAI 요약/포맷팅 API (5가지 모드)
+│   ├── login/page.tsx             # 로그인 페이지
+│   ├── signup/page.tsx            # 회원가입 페이지
+│   ├── sources/page.tsx           # 소스 관리 페이지 (보호됨)
 │   ├── settings/page.tsx          # 설정 페이지 (스타일 템플릿)
 │   ├── layout.tsx                 # 루트 레이아웃
-│   └── page.tsx                   # 메인 대시보드
+│   └── page.tsx                   # 메인 대시보드 (보호됨)
 ├── components/
 │   ├── ui/                        # 공통 UI 컴포넌트
 │   │   ├── Button.tsx
@@ -189,9 +223,16 @@ my-app/
 │   │   ├── Badge.tsx
 │   │   └── Spinner.tsx
 │   ├── layout/                    # 레이아웃 컴포넌트
-│   │   ├── Header.tsx
+│   │   ├── Header.tsx             # 사용자 메뉴 포함
 │   │   ├── Sidebar.tsx
 │   │   └── MainLayout.tsx
+│   ├── auth/                      # 인증 컴포넌트 (NEW!)
+│   │   ├── AuthProvider.tsx       # Firebase 인증 Context
+│   │   ├── ProtectedRoute.tsx     # 라우트 보호 HOC
+│   │   ├── LoginForm.tsx          # 로그인 폼
+│   │   └── SignupForm.tsx         # 회원가입 폼
+│   ├── migration/                 # 데이터 마이그레이션 (NEW!)
+│   │   └── MigrationDialog.tsx    # localStorage → Firestore 마이그레이션 UI
 │   ├── news/                      # 뉴스 관련 컴포넌트
 │   │   ├── NewsList.tsx
 │   │   ├── NewsCard.tsx
@@ -205,26 +246,37 @@ my-app/
 │   ├── social/                    # 소셜 미디어 컴포넌트
 │   │   ├── PlatformPreview.tsx
 │   │   ├── CopyButton.tsx
-│   │   └── FeedbackButtons.tsx    # 피드백 및 재생성 UI
-│   └── settings/                  # 설정 컴포넌트
-│       └── StyleEditor.tsx        # 스타일 템플릿 편집기
+│   │   └── FeedbackButtons.tsx
+│   ├── settings/                  # 설정 컴포넌트
+│   │   └── StyleEditor.tsx
+│   └── FirestoreSyncProvider.tsx  # Firestore 실시간 동기화 Provider
 ├── hooks/                         # 커스텀 React Hooks
-│   ├── useLocalStorage.ts
+│   ├── useAuth.ts                 # Firebase 인증 hook (NEW!)
+│   ├── useFirestoreSync.ts        # Firestore 리스너 관리 (NEW!)
+│   ├── useMigration.ts            # 데이터 마이그레이션 hook (NEW!)
 │   ├── useSources.ts
 │   ├── useNews.ts
 │   ├── useOpenAI.ts
-│   ├── useStyleTemplates.ts       # 스타일 템플릿 관리
+│   ├── useStyleTemplates.ts
 │   └── queries.ts                 # TanStack Query mutations
-├── lib/                           # 유틸리티 함수
-│   ├── constants.ts               # 상수 및 기본값
-│   ├── providers.tsx              # TanStack Query + Sonner Provider
+├── lib/
+│   ├── firebase/                  # Firebase 통합 (NEW!)
+│   │   ├── config.ts              # Firebase 초기화 및 설정
+│   │   ├── auth.ts                # 인증 함수 (Google, 이메일)
+│   │   ├── firestore.ts           # Firestore CRUD 및 실시간 리스너
+│   │   ├── converters.ts          # Firestore 데이터 변환기
+│   │   └── index.ts               # 통합 export
+│   ├── constants.ts               # 상수 및 기본값 (8개 추가 소스)
+│   ├── providers.tsx              # AuthProvider + FirestoreSyncProvider 추가
 │   ├── api.ts                     # 타입 안전 API 클라이언트
-│   ├── date.ts                    # date-fns 날짜 포맷팅 유틸리티
+│   ├── date.ts                    # date-fns 유틸리티
 │   └── validations.ts             # Zod 스키마 및 폼 검증
-├── store/                         # Zustand 상태 관리
-│   └── index.ts                   # 통합 스토어 (News, Sources, StyleTemplates, UI)
+├── store/                         # Zustand 상태 관리 (Firestore 통합)
+│   └── index.ts                   # News, Sources, StyleTemplates 스토어 (실시간 동기화)
 ├── types/
 │   └── news.ts                    # TypeScript 타입 정의
+├── firestore.rules                # Firestore 보안 규칙 (NEW!)
+├── firestore.indexes.json         # Firestore 인덱스 설정 (NEW!)
 └── public/                        # 정적 파일
 ```
 
@@ -285,13 +337,21 @@ interface PlatformContent {
 }
 ```
 
-## 기본 제공 뉴스 소스
+## 기본 제공 뉴스 소스 (13개)
 
 - **OpenAI Blog** - https://openai.com/blog (RSS 지원)
 - **Anthropic News** - https://anthropic.com/news
 - **Google AI Blog** - https://blog.google/technology/ai/ (RSS 지원)
 - **Meta AI Blog** - https://ai.meta.com/blog/
 - **Hugging Face Blog** - https://huggingface.co/blog (RSS 지원)
+- **DeepMind Blog** - https://deepmind.google/discover/blog/ (RSS 지원)
+- **NVIDIA AI Blog** - https://blogs.nvidia.com/blog/category/deep-learning/ (RSS 지원)
+- **Microsoft AI Blog** - https://blogs.microsoft.com/ai/ (RSS 지원)
+- **AWS Machine Learning Blog** - https://aws.amazon.com/blogs/machine-learning/ (RSS 지원)
+- **MIT Technology Review AI** - https://www.technologyreview.com/topic/artificial-intelligence/ (RSS 지원)
+- **The Verge AI** - https://www.theverge.com/ai-artificial-intelligence (RSS 지원)
+- **VentureBeat AI** - https://venturebeat.com/category/ai/ (RSS 지원)
+- **The Decoder** - https://the-decoder.com/ (RSS 지원)
 
 ## API 엔드포인트
 
@@ -501,11 +561,20 @@ DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 5가지
 
 ## 사용 방법
 
+### 0. 회원가입 및 로그인
+1. 앱 접속 시 로그인 페이지로 리다이렉트
+2. **Google 계정으로 로그인** 또는 **이메일/비밀번호로 회원가입**
+3. 로그인 성공 시 자동으로 대시보드로 이동
+4. **기존 localStorage 데이터가 있는 경우**: 마이그레이션 다이얼로그 표시
+   - "Migrate Now" 클릭 시 자동으로 Firestore로 데이터 이전
+   - "Skip" 또는 "Maybe Later" 선택 시 마이그레이션 건너뛰기
+
 ### 1. 뉴스 소스 관리
 1. 상단 메뉴에서 "Sources" 클릭
 2. "Add New Source" 버튼으로 새 소스 추가
 3. 이름, 웹사이트 URL, RSS URL(선택사항) 입력
 4. 기존 소스는 편집 또는 비활성화 가능
+5. **중복 소스 감지**: 동일한 URL의 소스가 있으면 경고 표시 및 "Remove Duplicates" 버튼으로 제거
 
 ### 2. 뉴스 수집
 #### RSS 피드 자동 수집:
@@ -546,6 +615,48 @@ DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 5가지
 2. 필요시 추가 편집 후 게시
 
 ## 개발 로드맵
+
+### 완료된 기능 (v0.4.0) - Firebase 통합
+- [x] **Firebase Authentication 통합**
+  - Google 소셜 로그인
+  - 이메일/비밀번호 회원가입 및 로그인
+  - 비밀번호 재설정 (이메일)
+  - 사용자 프로필 관리
+- [x] **Cloud Firestore 데이터베이스 통합**
+  - 뉴스 아이템, 소스, 스타일 템플릿 Firestore 저장
+  - 실시간 데이터 동기화 (onSnapshot)
+  - 사용자별 데이터 격리 (users/{userId}/...)
+  - Optimistic UI 업데이트 (낙관적 업데이트 + 롤백)
+- [x] **Firestore 오프라인 지원**
+  - IndexedDB를 통한 로컬 캐싱
+  - 오프라인 모드에서 데이터 읽기/쓰기 가능
+  - 온라인 복귀 시 자동 동기화
+- [x] **localStorage → Firestore 자동 마이그레이션**
+  - 기존 데이터 감지 및 마이그레이션 UI
+  - 배치 처리로 효율적인 대량 데이터 이전
+  - 진행 상태 표시 및 에러 핸들링
+- [x] **보안 규칙 및 데이터 검증**
+  - Firestore Security Rules (users/{userId} 격리)
+  - 필수 필드 및 타입 검증
+  - 소유자만 CRUD 가능
+- [x] **보호된 라우트 (ProtectedRoute)**
+  - 인증되지 않은 사용자 자동 리다이렉트
+  - 대시보드 및 소스 페이지 보호
+- [x] **사용자 메뉴 및 프로필**
+  - 헤더에 사용자 아바타 및 이름 표시
+  - 드롭다운 메뉴 (Sign Out)
+  - 프로필 사진 자동 표시 (Google 로그인 시)
+- [x] **중복 소스 방지 및 제거 기능**
+  - 소스 추가 시 URL 중복 체크
+  - 기존 중복 소스 자동 감지
+  - "Remove Duplicates" 버튼으로 일괄 삭제
+- [x] **기본 소스 8개 추가**
+  - DeepMind, NVIDIA, Microsoft, AWS ML Blog
+  - MIT Tech Review, The Verge, VentureBeat, The Decoder
+- [x] **Zustand 스토어 Firestore 통합**
+  - localStorage persist 제거
+  - Firestore 실시간 리스너로 자동 업데이트
+  - 모든 CRUD 액션을 Firestore API로 변경
 
 ### 완료된 기능 (v0.3.1)
 - [x] **Full Article 탭 캐싱 개선** (v0.3.1)
@@ -635,16 +746,16 @@ DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 5가지
   - 소스 아이콘 개선 (RSS: 주황색 Rss 아이콘, Scraping: 파란색 Globe 아이콘)
 
 ### 향후 개발 계획
-- [ ] 추가 AI 프로바이더 지원 (Claude, GPT 등) - 필요시
 - [ ] 뉴스 필터링 및 검색 기능 개선 (카테고리, 날짜, 키워드)
-- [ ] 자동 스케줄링 (일정 시간마다 자동 수집)
+- [ ] 자동 스케줄링 (Cloud Functions로 일정 시간마다 자동 수집)
 - [ ] 데이터 내보내기/가져오기 (JSON, CSV)
-- [ ] 클라우드 동기화 (Firebase, Supabase 등)
 - [ ] 다국어 지원 (영어, 일본어 등)
 - [ ] 이미지 처리 및 OG 이미지 추출
-- [ ] 통계 및 분석 대시보드
-- [ ] 멀티 계정 관리
+- [ ] 통계 및 분석 대시보드 (Firebase Analytics)
 - [ ] 예약 게시 기능
+- [ ] 팀 협업 기능 (여러 사용자가 동일한 뉴스 공유)
+- [ ] Firebase Storage를 통한 이미지 업로드
+- [ ] 푸시 알림 (Firebase Cloud Messaging)
 
 ## 문제 해결
 
@@ -663,6 +774,22 @@ DeepSeek API를 활용한 다양한 AI 처리 기능을 제공합니다. 5가지
 - 대상 웹사이트의 구조가 복잡하거나 동적 렌더링을 사용하는 경우 실패할 수 있음
 - 일부 사이트는 스크래핑을 차단할 수 있음
 - 해당 경우 수동으로 내용을 복사하여 추가 가능
+
+### Firebase 연결 오류
+- `.env.local` 파일에 Firebase 설정이 올바르게 입력되었는지 확인
+- Firebase Console에서 웹 앱이 추가되었는지 확인
+- Authentication 및 Firestore가 활성화되어 있는지 확인
+- 브라우저 콘솔에서 자세한 에러 메시지 확인
+
+### 로그인 실패
+- Google 로그인: Firebase Console > Authentication > Sign-in method에서 Google 활성화 확인
+- 이메일 로그인: Firebase Console > Authentication > Sign-in method에서 이메일/비밀번호 활성화 확인
+- 비밀번호 재설정 이메일이 오지 않는 경우: 스팸 폴더 확인
+
+### 데이터가 동기화되지 않음
+- 인터넷 연결 상태 확인 (오프라인 모드에서는 로컬 캐시만 사용)
+- Firestore Security Rules가 올바르게 배포되었는지 확인
+- 브라우저 콘솔에서 Firestore 에러 메시지 확인
 
 ## 라이선스
 

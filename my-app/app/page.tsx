@@ -8,6 +8,7 @@ import { RssFetcher } from '@/components/collect/RssFetcher';
 import { UrlScraper } from '@/components/collect/UrlScraper';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useSources } from '@/hooks/useSources';
 import { useNews } from '@/hooks/useNews';
 import { useOpenAI } from '@/hooks/useOpenAI';
@@ -214,16 +215,19 @@ export default function DashboardPage() {
 
   if (sourcesLoading || newsLoading) {
     return (
-      <MainLayout sources={sources}>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </MainLayout>
+      <ProtectedRoute>
+        <MainLayout sources={sources}>
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </MainLayout>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <MainLayout sources={sources}>
+    <ProtectedRoute>
+      <MainLayout sources={sources}>
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -319,6 +323,7 @@ export default function DashboardPage() {
           generatedContents={generatedContents}
         />
       </div>
-    </MainLayout>
+      </MainLayout>
+    </ProtectedRoute>
   );
 }
