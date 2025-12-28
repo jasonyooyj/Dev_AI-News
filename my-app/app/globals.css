@@ -398,25 +398,27 @@ html.theme-transition *::after {
   text-decoration-color: var(--prose-links);
 }
 
-/* Headings - Notion style */
+/* Headings - Notion style with visual hierarchy */
 .prose h1 {
-  font-size: 1.875rem;
+  font-size: 2rem;
   font-weight: 700;
-  line-height: 1.3;
-  margin-top: 2rem;
-  margin-bottom: 4px;
-  padding: 3px 2px;
-  color: var(--prose-headings);
+  line-height: 1.2;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(55, 53, 47, 0.1);
+  color: rgb(25, 23, 17);
+  letter-spacing: -0.02em;
 }
 
 .prose h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  line-height: 1.3;
-  margin-top: 1.75rem;
-  margin-bottom: 4px;
-  padding: 3px 2px;
-  color: var(--prose-headings);
+  line-height: 1.25;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  color: rgb(35, 33, 27);
+  letter-spacing: -0.01em;
 }
 
 .prose h3 {
@@ -424,23 +426,26 @@ html.theme-transition *::after {
   font-weight: 600;
   line-height: 1.3;
   margin-top: 1.5rem;
-  margin-bottom: 4px;
-  padding: 3px 2px;
-  color: var(--prose-headings);
+  margin-bottom: 0.5rem;
+  color: rgb(55, 53, 47);
 }
 
 .prose h4 {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.4;
   margin-top: 1.25rem;
-  margin-bottom: 4px;
-  padding: 3px 2px;
-  color: var(--prose-headings);
+  margin-bottom: 0.25rem;
+  color: rgb(55, 53, 47);
 }
 
 .prose :first-child {
   margin-top: 0;
+}
+
+.prose h1:first-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 /* Bold */
@@ -594,6 +599,20 @@ html.theme-transition *::after {
   --prose-code: rgb(235, 87, 87);
   --prose-code-bg: rgba(135, 131, 120, 0.2);
   --prose-pre-bg: rgba(135, 131, 120, 0.15);
+}
+
+.dark .prose h1 {
+  color: rgba(255, 255, 255, 1);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .prose h2 {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dark .prose h3,
+.dark .prose h4 {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .dark .prose th,
