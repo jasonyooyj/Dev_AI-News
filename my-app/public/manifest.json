@@ -1,0 +1,16 @@
+{
+  "name": "AI News Dashboard",
+  "short_name": "AI News",
+  "description": "AI-powered news aggregation and social media content generation",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

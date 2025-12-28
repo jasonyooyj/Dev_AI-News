@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SourceList } from '@/components/sources/SourceList';
 import { SourceForm } from '@/components/sources/SourceForm';
@@ -12,6 +13,17 @@ export default function SourcesPage() {
   const { sources, isLoading, addSource, updateSource, deleteSource, toggleSource } = useSources();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSource, setEditingSource] = useState<Source | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Check for ?add=true query param
+  useEffect(() => {
+    if (searchParams.get('add') === 'true') {
+      setIsFormOpen(true);
+      // Remove the query param
+      router.replace('/sources');
+    }
+  }, [searchParams, router]);
 
   const handleAdd = () => {
     setEditingSource(null);

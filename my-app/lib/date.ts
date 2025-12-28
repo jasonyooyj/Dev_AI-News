@@ -2,12 +2,27 @@ import { formatDistanceToNow, format, parseISO, isValid } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 /**
+ * Parse date string with fallback for different formats
+ */
+function parseDate(dateString: string | Date): Date {
+  if (dateString instanceof Date) return dateString;
+
+  // Try ISO format first
+  let date = parseISO(dateString);
+  if (isValid(date)) return date;
+
+  // Fallback to native Date parsing (handles RFC 2822 and other formats)
+  date = new Date(dateString);
+  return date;
+}
+
+/**
  * Format a date as relative time (e.g., "2 hours ago")
  */
 export function formatRelativeTime(dateString?: string | Date, locale: 'en' | 'ko' = 'en'): string {
   if (!dateString) return 'Unknown date';
 
-  const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+  const date = parseDate(dateString);
   if (!isValid(date)) return 'Invalid date';
 
   return formatDistanceToNow(date, {
@@ -22,7 +37,7 @@ export function formatRelativeTime(dateString?: string | Date, locale: 'en' | 'k
 export function formatDisplayDate(dateString?: string | Date): string {
   if (!dateString) return 'Unknown date';
 
-  const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+  const date = parseDate(dateString);
   if (!isValid(date)) return 'Invalid date';
 
   return format(date, 'MMM d, yyyy');
@@ -34,7 +49,7 @@ export function formatDisplayDate(dateString?: string | Date): string {
 export function formatDateTime(dateString?: string | Date): string {
   if (!dateString) return 'Unknown date';
 
-  const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+  const date = parseDate(dateString);
   if (!isValid(date)) return 'Invalid date';
 
   return format(date, 'MMM d, yyyy, h:mm a');
@@ -46,7 +61,7 @@ export function formatDateTime(dateString?: string | Date): string {
 export function formatCompactDate(dateString?: string | Date): string {
   if (!dateString) return 'Unknown';
 
-  const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+  const date = parseDate(dateString);
   if (!isValid(date)) return 'Invalid';
 
   const now = new Date();

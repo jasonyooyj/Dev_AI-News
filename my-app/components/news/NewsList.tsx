@@ -56,7 +56,7 @@ export function NewsList({
   }, [sources]);
 
   const filteredNews = useMemo(() => {
-    return news.filter((item) => {
+    const filtered = news.filter((item) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -75,6 +75,13 @@ export function NewsList({
       if (filterSourceId !== 'all' && item.sourceId !== filterSourceId) return false;
 
       return true;
+    });
+
+    // Sort by latest first (publishedAt or createdAt)
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.publishedAt || a.createdAt).getTime();
+      const dateB = new Date(b.publishedAt || b.createdAt).getTime();
+      return dateB - dateA; // Descending (latest first)
     });
   }, [news, searchQuery, filterStatus, filterSourceId]);
 

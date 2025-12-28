@@ -11,6 +11,10 @@ export const sourceFormSchema = z.object({
     .string()
     .min(1, 'Name is required')
     .max(100, 'Name must be less than 100 characters'),
+  description: z
+    .string()
+    .max(200, 'Description must be less than 200 characters')
+    .optional(),
   websiteUrl: urlSchema,
   rssUrl: z.string().optional(),
   isActive: z.boolean(),

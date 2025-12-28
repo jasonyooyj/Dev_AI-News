@@ -38,6 +38,7 @@ export function SourceForm({
     resolver: zodResolver(sourceFormSchema),
     defaultValues: {
       name: '',
+      description: '',
       websiteUrl: '',
       rssUrl: '',
       isActive: true,
@@ -50,6 +51,7 @@ export function SourceForm({
     if (source) {
       reset({
         name: source.name,
+        description: source.description || '',
         websiteUrl: source.websiteUrl,
         rssUrl: source.rssUrl || '',
         isActive: source.isActive,
@@ -57,6 +59,7 @@ export function SourceForm({
     } else {
       reset({
         name: '',
+        description: '',
         websiteUrl: '',
         rssUrl: '',
         isActive: true,
@@ -67,6 +70,7 @@ export function SourceForm({
   const onFormSubmit = (data: SourceFormData) => {
     onSubmit({
       name: data.name.trim(),
+      description: data.description?.trim() || undefined,
       websiteUrl: data.websiteUrl.trim(),
       rssUrl: data.rssUrl?.trim() || undefined,
       isActive: data.isActive,
@@ -99,6 +103,21 @@ export function SourceForm({
           leftIcon={<Link2 className="w-4 h-4" />}
           required
         />
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Description
+          </label>
+          <textarea
+            {...register('description')}
+            placeholder="Brief description of this news source..."
+            className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            rows={2}
+          />
+          {errors.description?.message && (
+            <p className="text-sm text-red-500">{errors.description.message}</p>
+          )}
+        </div>
 
         <Input
           label="Website URL"

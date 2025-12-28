@@ -104,6 +104,7 @@ export function useAnalyzeStyle() {
 export function useFetchRss() {
   const addNewsItem = useNewsStore((s) => s.addNewsItem);
   const newsItems = useNewsStore((s) => s.newsItems);
+  const updateSource = useSourcesStore((s) => s.updateSource);
 
   return useMutation({
     mutationFn: async ({ source }: { source: Source }) => {
@@ -127,6 +128,8 @@ export function useFetchRss() {
           addedCount++;
         }
       });
+      // Update lastFetchedAt for the source
+      updateSource(source.id, { lastFetchedAt: new Date().toISOString() });
       toast.success(`Fetched ${addedCount} new articles from ${source.name}`);
     },
     onError: (error: ApiError) => {

@@ -46,8 +46,20 @@ interface SourceCardProps {
   onToggle?: (source: Source) => void;
 }
 
+// Get favicon URL from website URL
+function getFaviconUrl(websiteUrl: string): string {
+  try {
+    const url = new URL(websiteUrl);
+    return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+  } catch {
+    return '';
+  }
+}
+
 function SourceCard({ source, onEdit, onDelete, onToggle }: SourceCardProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const logoSrc = source.logoUrl || getFaviconUrl(source.websiteUrl);
 
   return (
     <Card
@@ -66,20 +78,18 @@ function SourceCard({ source, onEdit, onDelete, onToggle }: SourceCardProps) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
-            <div
-              className={`
-                flex items-center justify-center w-10 h-10 rounded-lg
-                ${
-                  source.rssUrl
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
-                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                }
-              `}
-            >
-              {source.rssUrl ? (
-                <Rss className="w-5 h-5" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+              {logoSrc && !imgError ? (
+                <img
+                  src={logoSrc}
+                  alt={`${source.name} logo`}
+                  className="w-6 h-6 object-contain"
+                  onError={() => setImgError(true)}
+                />
+              ) : source.rssUrl ? (
+                <Rss className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
               ) : (
-                <Link2 className="w-5 h-5" />
+                <Link2 className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
               )}
             </div>
             <div>
@@ -153,6 +163,13 @@ function SourceCard({ source, onEdit, onDelete, onToggle }: SourceCardProps) {
         </div>
 
         {/* URLs */}
+        {/* Description */}
+        {source.description && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
+            {source.description}
+          </p>
+        )}
+
         <div className="space-y-2 mb-4">
           <a
             href={source.websiteUrl}
@@ -235,22 +252,13 @@ export function SourceList({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-            News Sources
-          </h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            {sources.length} sources ({activeCount} active)
-          </p>
-        </div>
-        <Button
-          variant="primary"
-          onClick={onAdd}
-          leftIcon={<Plus className="w-4 h-4" />}
-        >
-          Add Source
-        </Button>
+      <div>
+        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+          News Sources
+        </h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          {sources.length} sources ({activeCount} active)
+        </p>
       </div>
 
       {/* Sources Grid */}
@@ -263,16 +271,9 @@ export function SourceList({
             <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-1">
               No sources yet
             </h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Add your first news source to start collecting AI news
             </p>
-            <Button
-              variant="primary"
-              onClick={onAdd}
-              leftIcon={<Plus className="w-4 h-4" />}
-            >
-              Add Source
-            </Button>
           </div>
         </div>
       ) : (

@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
         title: item.title,
         link: item.link,
         pubDate: item.pubDate,
+        isoDate: item.isoDate || (item.pubDate ? new Date(item.pubDate).toISOString() : null),
         content: item.content,
         contentSnippet: item.contentSnippet,
       })),

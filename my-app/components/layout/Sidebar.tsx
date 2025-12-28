@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Database,
@@ -58,6 +58,7 @@ export function Sidebar({
   onRefreshSources,
   isRefreshing = false,
 }: SidebarProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const [isSourcesExpanded, setIsSourcesExpanded] = useState(true);
 
@@ -136,7 +137,13 @@ export function Sidebar({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onAddSource}
+                onClick={() => {
+                  if (onAddSource) {
+                    onAddSource();
+                  } else {
+                    router.push('/sources?add=true');
+                  }
+                }}
                 className="w-full justify-start gap-3 px-3"
                 leftIcon={<Plus className="w-4 h-4" />}
               >
