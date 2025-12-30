@@ -1,6 +1,6 @@
 # AI News Dashboard - Project Specification
 
-> Version: 0.8.0 | Last Updated: 2025-12-30
+> Version: 0.8.1 | Last Updated: 2025-12-30
 
 ## Overview
 
@@ -155,6 +155,7 @@ INSTAGRAM_APP_SECRET=...
 
 ## Changelog
 
+- **v0.8.1** (2025-12-30): README 문서 전면 개편 및 Firebase 설정 파일 정리
 - **v0.8.0** (2025-12-30): 인증 제거, 공개 접근 모델
 - **v0.7.1**: 버그 수정
 - **v0.7.0**: Firebase → Neon PostgreSQL 마이그레이션
