@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const MODEL = "gemini-2.0-flash";
+const MODEL = "gemini-3-flash-preview";
 
 // Gemini 클라이언트 생성
 function getGeminiClient(): GoogleGenAI {
