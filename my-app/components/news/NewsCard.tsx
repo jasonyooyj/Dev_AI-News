@@ -85,7 +85,7 @@ export const NewsCard = memo(function NewsCard({
     <Card
       variant="default"
       padding="none"
-      className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden relative"
+      className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden relative h-full flex flex-col"
     >
       {/* Priority Badge - 카드 좌상단 */}
       {priority !== 'medium' && (
@@ -95,7 +95,7 @@ export const NewsCard = memo(function NewsCard({
         </div>
       )}
 
-      <div className={`p-4 sm:p-5 ${priority !== 'medium' ? 'pt-8' : ''}`}>
+      <div className={`p-4 sm:p-5 flex flex-col flex-1 ${priority !== 'medium' ? 'pt-8' : ''}`}>
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
@@ -125,7 +125,7 @@ export const NewsCard = memo(function NewsCard({
         </h3>
 
         {/* Summary Content */}
-        <div className="min-h-[72px] mb-4">
+        <div className="min-h-[72px] mb-4 flex-1">
           {isSummarizing ? (
             <SummaryLoading />
           ) : hasQuickSummary && news.quickSummary ? (
@@ -145,8 +145,8 @@ export const NewsCard = memo(function NewsCard({
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+        {/* Actions - 하단 고정 */}
+        <div className="flex items-center gap-2 pt-3 mt-auto border-t border-zinc-100 dark:border-zinc-800">
           <Button
             variant="primary"
             size="sm"
