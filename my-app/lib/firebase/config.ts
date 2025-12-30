@@ -1,8 +1,10 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import {
+  initializeFirestore,
   getFirestore,
-  enableIndexedDbPersistence,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   connectFirestoreEmulator,
   Firestore,
 } from 'firebase/firestore';
@@ -41,21 +43,26 @@ function initializeFirebase() {
   }
 
   auth = getAuth(app);
-  db = getFirestore(app);
 
-  // Enable offline persistence (client-side only)
-  if (typeof window !== 'undefined' && db) {
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn(
-          'Firestore persistence failed: Multiple tabs open. Only one tab can enable persistence at a time.'
-        );
-      } else if (err.code === 'unimplemented') {
-        console.warn(
-          'Firestore persistence not supported in this browser.'
-        );
+  // Initialize Firestore with persistent cache (multi-tab support)
+  // This replaces the deprecated enableIndexedDbPersistence()
+  if (typeof window !== 'undefined') {
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      });
+    } catch (err) {
+      // If Firestore is already initialized (e.g., hot reload), get existing instance
+      if ((err as Error).message?.includes('already been called')) {
+        db = getFirestore(app);
+      } else {
+        throw err;
       }
-    });
+    }
+  } else {
+    db = getFirestore(app);
   }
 
   // Connect to emulators in development (optional)

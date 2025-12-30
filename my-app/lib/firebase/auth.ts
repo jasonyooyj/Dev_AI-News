@@ -9,7 +9,7 @@ import {
   User,
   UserCredential,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocFromCache, serverTimestamp } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from './config';
 
 // Google Auth Provider
@@ -117,22 +117,43 @@ export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
 }
 
-// Get user profile from Firestore
+// Get user profile from Firestore (with offline support)
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const db = getFirebaseDb();
   const userRef = doc(db, 'users', userId);
-  const userSnap = await getDoc(userRef);
 
-  if (userSnap.exists()) {
-    const data = userSnap.data();
-    return {
-      email: data.email,
-      displayName: data.displayName,
-      photoURL: data.photoURL,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      lastLoginAt: data.lastLoginAt?.toDate() || new Date(),
-      settings: data.settings || { theme: 'system', autoSummarize: true },
-    };
+  // Helper to parse document data
+  const parseUserProfile = (data: Record<string, unknown>): UserProfile => ({
+    email: data.email as string,
+    displayName: data.displayName as string,
+    photoURL: data.photoURL as string | null,
+    createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+    lastLoginAt: (data.lastLoginAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+    settings: (data.settings as UserProfile['settings']) || { theme: 'system', autoSummarize: true },
+  });
+
+  // Try cache first for faster loading
+  try {
+    const cachedSnap = await getDocFromCache(userRef);
+    if (cachedSnap.exists()) {
+      return parseUserProfile(cachedSnap.data());
+    }
+  } catch {
+    // Cache miss or offline - continue to server fetch
+  }
+
+  // Fetch from server
+  try {
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      return parseUserProfile(userSnap.data());
+    }
+  } catch (err) {
+    // Silently handle offline errors - profile will load when online
+    if ((err as { code?: string })?.code === 'unavailable') {
+      return null;
+    }
+    throw err;
   }
 
   return null;
