@@ -14,6 +14,7 @@ const sourceSchema = z.object({
   description: z.string().optional(),
   logoUrl: z.string().url().optional(),
   isActive: z.boolean().optional(),
+  type: z.enum(['rss', 'youtube', 'twitter', 'threads', 'blog']).default('rss'),
   scrapeConfig: z
     .object({
       articleSelector: z.string(),

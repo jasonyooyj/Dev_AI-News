@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI News Dashboard
+
+AI 뉴스/콘텐츠를 다양한 소스에서 수집하고, AI 요약을 제공하며, 소셜 미디어용 콘텐츠를 생성하는 대시보드.
+
+## Features
+
+- **다중 소스 수집**: RSS, YouTube, X(Twitter), Threads, 블로그
+- **AI 요약**: Gemini AI 기반 3줄 핵심 요약
+- **소셜 콘텐츠 생성**: 플랫폼별 맞춤 콘텐츠 자동 생성
+- **스타일 템플릿**: 나만의 문체로 콘텐츠 작성
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Database**: Neon PostgreSQL + Drizzle ORM
+- **AI**: Google Gemini 3 Flash
+- **State**: Zustand + TanStack Query
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your API keys
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supported Sources
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Type | Description |
+|------|-------------|
+| RSS | RSS 피드 자동 파싱 |
+| YouTube | 비디오/채널 콘텐츠 스크래핑 |
+| X/Twitter | 트윗/프로필 메타데이터 추출 |
+| Threads | 포스트/프로필 스크래핑 |
+| Blog | 웹 스크래핑 (CSS 셀렉터 지원) |
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+```env
+DATABASE_URL=           # Neon PostgreSQL connection string
+GEMINI_API_KEY=         # Google Gemini API key
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev       # Development server
+npm run build     # Production build
+npm run start     # Start production server
+npm run lint      # Lint code
+```

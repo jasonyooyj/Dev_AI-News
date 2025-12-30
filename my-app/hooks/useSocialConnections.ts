@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuthContext } from '@/components/auth/AuthProvider';
 import type { SocialConnection, SocialPlatform, PublishResult } from '@/types/news';
 import { toast } from 'sonner';
 
@@ -52,19 +51,12 @@ interface UseSocialConnectionsReturn {
 }
 
 export function useSocialConnections(): UseSocialConnectionsReturn {
-  const { user } = useAuthContext();
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   // Fetch connections on mount
   const fetchConnections = useCallback(async () => {
-    if (!user) {
-      setConnections([]);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     try {
       const response = await fetch('/api/social/connections');
@@ -78,7 +70,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     fetchConnections();
@@ -121,10 +113,6 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         appPassword: string;
       };
     }) => {
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       try {
         await saveConnection({
           platform: 'bluesky',
@@ -143,7 +131,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    []
   );
 
   // Connect Threads account
@@ -156,10 +144,6 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         expiresAt: string;
       };
     }) => {
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       try {
         await saveConnection({
           platform: 'threads',
@@ -179,7 +163,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    []
   );
 
   // Connect LinkedIn account
@@ -193,10 +177,6 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         refreshToken?: string;
       };
     }) => {
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       try {
         await saveConnection({
           platform: 'linkedin',
@@ -217,7 +197,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    []
   );
 
   // Connect Instagram account
@@ -230,10 +210,6 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         expiresAt: string;
       };
     }) => {
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       try {
         await saveConnection({
           platform: 'instagram',
@@ -253,16 +229,12 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    []
   );
 
   // Disconnect a platform
   const disconnect = useCallback(
     async (platform: SocialPlatform) => {
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       const connection = connections.find((c) => c.platform === platform);
       if (!connection) return;
 
@@ -281,16 +253,12 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user, connections, fetchConnections]
+    [connections, fetchConnections]
   );
 
   // Save publish result to history
   const savePublishResult = useCallback(
     async (newsItemId: string, content: string, results: PublishResult[]) => {
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
       try {
         await fetch('/api/publish-history', {
           method: 'POST',
@@ -302,7 +270,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         // Don't throw - this is non-critical
       }
     },
-    [user]
+    []
   );
 
   return {
