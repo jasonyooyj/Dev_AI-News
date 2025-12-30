@@ -35,7 +35,9 @@ export function Dashboard() {
   const { generatePlatformContent, regenerateWithFeedback } = useAI();
   const { templates: styleTemplates } = useStyleTemplates();
 
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
+  // Get the actual news item from store (stays in sync with updates)
+  const selectedNews = selectedNewsId ? newsItems.find(n => n.id === selectedNewsId) || null : null;
   const [activeTab, setActiveTab] = useState<'news' | 'collect'>('news');
   const [summarizingIds] = useState<string[]>([]);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -45,7 +47,7 @@ export function Dashboard() {
   const activeSources = sources.filter((s) => s.isActive);
 
   const handleViewNews = (newsItem: NewsItem) => {
-    setSelectedNews(newsItem);
+    setSelectedNewsId(newsItem.id);
     setGeneratedContents({});
   };
 
@@ -108,8 +110,8 @@ export function Dashboard() {
 
   const handleDeleteNews = (newsItem: NewsItem) => {
     deleteNewsItem(newsItem.id);
-    if (selectedNews?.id === newsItem.id) {
-      setSelectedNews(null);
+    if (selectedNewsId === newsItem.id) {
+      setSelectedNewsId(null);
       setGeneratedContents({});
     }
   };
@@ -119,7 +121,7 @@ export function Dashboard() {
   };
 
   const handleCloseNewsDetail = () => {
-    setSelectedNews(null);
+    setSelectedNewsId(null);
     setGeneratedContents({});
   };
 
