@@ -172,6 +172,18 @@ export function subscribeToNewsItems(
       callback(items);
     },
     (error) => {
+      const errorMessage = error.message || String(error);
+      const isBlocked = errorMessage.includes('BLOCKED_BY_CLIENT') ||
+        errorMessage.includes('blocked') ||
+        error.code === 'unavailable';
+
+      if (isBlocked) {
+        console.warn(
+          'Firestore connection blocked by browser extension. ' +
+          'Please disable ad blockers or privacy extensions for this site, or allow firestore.googleapis.com in your extension settings.'
+        );
+      }
+
       console.error('Error subscribing to news items:', error);
       onError?.(error);
     }
@@ -249,6 +261,18 @@ export function subscribeToSources(
       callback(sources);
     },
     (error) => {
+      const errorMessage = error.message || String(error);
+      const isBlocked = errorMessage.includes('BLOCKED_BY_CLIENT') ||
+        errorMessage.includes('blocked') ||
+        error.code === 'unavailable';
+
+      if (isBlocked) {
+        console.warn(
+          'Firestore connection blocked by browser extension. ' +
+          'Please disable ad blockers or privacy extensions for this site, or allow firestore.googleapis.com in your extension settings.'
+        );
+      }
+
       console.error('Error subscribing to sources:', error);
       onError?.(error);
     }
@@ -370,6 +394,18 @@ export function subscribeToStyleTemplates(
       callback(templates);
     },
     (error) => {
+      const errorMessage = error.message || String(error);
+      const isBlocked = errorMessage.includes('BLOCKED_BY_CLIENT') ||
+        errorMessage.includes('blocked') ||
+        error.code === 'unavailable';
+
+      if (isBlocked) {
+        console.warn(
+          'Firestore connection blocked by browser extension. ' +
+          'Please disable ad blockers or privacy extensions for this site, or allow firestore.googleapis.com in your extension settings.'
+        );
+      }
+
       console.error('Error subscribing to style templates:', error);
       onError?.(error);
     }
@@ -380,7 +416,7 @@ export function subscribeToStyleTemplates(
 
 export async function batchAddNewsItems(
   userId: string,
-  newsItems: Omit<NewsItem, 'id' | 'createdAt'>[]
+  newsItems: Omit<NewsItem, 'id'>[]
 ): Promise<string[]> {
   const db = getFirebaseDb();
   const batch = writeBatch(db);
@@ -394,7 +430,7 @@ export async function batchAddNewsItems(
     batch.set(docRef, {
       ...item,
       isBookmarked: item.isBookmarked ?? false,
-      createdAt: serverTimestamp(),
+      createdAt: item.createdAt ? isoStringToTimestamp(item.createdAt) : serverTimestamp(),
       publishedAt: item.publishedAt ? isoStringToTimestamp(item.publishedAt) : null,
     });
   }
@@ -408,46 +444,64 @@ export async function batchAddSources(
   sources: Omit<Source, 'id'>[]
 ): Promise<string[]> {
   const db = getFirebaseDb();
-  const batch = writeBatch(db);
   const ids: string[] = [];
+  const BATCH_SIZE = 500; // Firestore batch limit
 
-  for (const source of sources) {
-    const colRef = collection(db, getCollectionPath.sources(userId));
-    const docRef = doc(colRef);
-    ids.push(docRef.id);
+  // Split into batches of 500
+  for (let i = 0; i < sources.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    const batchSources = sources.slice(i, i + BATCH_SIZE);
 
-    batch.set(docRef, {
-      ...source,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    for (const source of batchSources) {
+      const colRef = collection(db, getCollectionPath.sources(userId));
+      const docRef = doc(colRef);
+      ids.push(docRef.id);
+
+      // Cast source to any to access createdAt if it exists in the input object
+      // (even if strictly typed Source doesn't have it on client, migrated data might)
+      const sourceWithDate = source as any;
+
+      batch.set(docRef, {
+        ...source,
+        createdAt: sourceWithDate.createdAt ? isoStringToTimestamp(sourceWithDate.createdAt) : serverTimestamp(),
+        updatedAt: sourceWithDate.updatedAt ? isoStringToTimestamp(sourceWithDate.updatedAt) : serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
   }
 
-  await batch.commit();
   return ids;
 }
 
 export async function batchAddStyleTemplates(
   userId: string,
-  templates: Omit<StyleTemplate, 'id' | 'createdAt' | 'updatedAt'>[]
+  templates: Omit<StyleTemplate, 'id'>[]
 ): Promise<string[]> {
   const db = getFirebaseDb();
-  const batch = writeBatch(db);
   const ids: string[] = [];
+  const BATCH_SIZE = 500; // Firestore batch limit
 
-  for (const template of templates) {
-    const colRef = collection(db, getCollectionPath.styleTemplates(userId));
-    const docRef = doc(colRef);
-    ids.push(docRef.id);
+  // Split into batches of 500
+  for (let i = 0; i < templates.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    const batchTemplates = templates.slice(i, i + BATCH_SIZE);
 
-    batch.set(docRef, {
-      ...template,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    for (const template of batchTemplates) {
+      const colRef = collection(db, getCollectionPath.styleTemplates(userId));
+      const docRef = doc(colRef);
+      ids.push(docRef.id);
+
+      batch.set(docRef, {
+        ...template,
+        createdAt: template.createdAt ? isoStringToTimestamp(template.createdAt) : serverTimestamp(),
+        updatedAt: template.updatedAt ? isoStringToTimestamp(template.updatedAt) : serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
   }
 
-  await batch.commit();
   return ids;
 }
 
@@ -554,6 +608,18 @@ export function subscribeToSocialConnections(
       callback(connections);
     },
     (error) => {
+      const errorMessage = error.message || String(error);
+      const isBlocked = errorMessage.includes('BLOCKED_BY_CLIENT') ||
+        errorMessage.includes('blocked') ||
+        error.code === 'unavailable';
+
+      if (isBlocked) {
+        console.warn(
+          'Firestore connection blocked by browser extension. ' +
+          'Please disable ad blockers or privacy extensions for this site, or allow firestore.googleapis.com in your extension settings.'
+        );
+      }
+
       console.error('Error subscribing to social connections:', error);
       onError?.(error);
     }
