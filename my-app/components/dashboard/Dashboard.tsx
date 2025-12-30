@@ -283,6 +283,8 @@ export function Dashboard() {
             onView={handleViewNews}
             onDelete={handleDeleteNews}
             onBookmark={handleBookmarkNews}
+            onReloadAll={handleRefreshSources}
+            isReloading={isRefreshingSources}
             summarizingIds={summarizingIds}
           />
         ) : (

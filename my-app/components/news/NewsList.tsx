@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Newspaper,
   Bookmark,
+  RefreshCw,
 } from 'lucide-react';
 import { NewsCard } from './NewsCard';
 import { Input } from '@/components/ui/Input';
@@ -27,6 +28,8 @@ interface NewsListProps {
   onView?: (news: NewsItem) => void;
   onDelete?: (news: NewsItem) => void;
   onBookmark?: (news: NewsItem) => void;
+  onReloadAll?: () => Promise<void>;
+  isReloading?: boolean;
   summarizingIds?: string[];
 }
 
@@ -37,6 +40,8 @@ export function NewsList({
   onView,
   onDelete,
   onBookmark,
+  onReloadAll,
+  isReloading = false,
   summarizingIds = [],
 }: NewsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -214,28 +219,43 @@ export function NewsList({
       )}
 
       {/* Stats */}
-      <div className="flex items-center gap-4 text-sm flex-wrap">
-        <span className="text-zinc-600 dark:text-zinc-400">
-          Showing{' '}
-          <span className="font-medium text-zinc-900 dark:text-zinc-100">
-            {filteredNews.length}
-          </span>{' '}
-          of {stats.total} news
-        </span>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="success" size="sm">
-            {stats.summarized} summarized
-          </Badge>
-          <Badge variant="warning" size="sm">
-            {stats.pending} pending
-          </Badge>
-          {stats.bookmarked > 0 && (
-            <Badge variant="default" size="sm" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-              <Bookmark className="w-3 h-3 mr-1 fill-current" />
-              {stats.bookmarked} bookmarked
+      <div className="flex items-center justify-between gap-4 text-sm flex-wrap">
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-zinc-600 dark:text-zinc-400">
+            Showing{' '}
+            <span className="font-medium text-zinc-900 dark:text-zinc-100">
+              {filteredNews.length}
+            </span>{' '}
+            of {stats.total} news
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="success" size="sm">
+              {stats.summarized} summarized
             </Badge>
-          )}
+            <Badge variant="warning" size="sm">
+              {stats.pending} pending
+            </Badge>
+            {stats.bookmarked > 0 && (
+              <Badge variant="default" size="sm" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <Bookmark className="w-3 h-3 mr-1 fill-current" />
+                {stats.bookmarked} bookmarked
+              </Badge>
+            )}
+          </div>
         </div>
+        {onReloadAll && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onReloadAll}
+            disabled={isReloading}
+            leftIcon={
+              <RefreshCw className={`w-4 h-4 ${isReloading ? 'animate-spin' : ''}`} />
+            }
+          >
+            {isReloading ? 'Reloading...' : 'Reload All'}
+          </Button>
+        )}
       </div>
 
       {/* News Grid/List */}
