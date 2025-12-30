@@ -1,86 +1,75 @@
 import { create } from 'zustand';
 import { Source, NewsItem, StyleTemplate, Platform, QuickSummary } from '@/types/news';
-import {
-  subscribeToNewsItems,
-  subscribeToSources,
-  subscribeToStyleTemplates,
-  addNewsItem as firestoreAddNewsItem,
-  updateNewsItem as firestoreUpdateNewsItem,
-  deleteNewsItem as firestoreDeleteNewsItem,
-  addSummaryToNewsItem,
-  saveTranslation as firestoreSaveTranslation,
-  toggleBookmark as firestoreToggleBookmark,
-  addSource as firestoreAddSource,
-  updateSource as firestoreUpdateSource,
-  deleteSource as firestoreDeleteSource,
-  addStyleTemplate as firestoreAddStyleTemplate,
-  updateStyleTemplate as firestoreUpdateStyleTemplate,
-  deleteStyleTemplate as firestoreDeleteStyleTemplate,
-  setDefaultStyleTemplate,
-  batchAddSources,
-} from '@/lib/firebase/firestore';
 import { DEFAULT_SOURCES } from '@/lib/constants';
-import type { Unsubscribe } from 'firebase/firestore';
+
+// API helper functions
+async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.error || 'Request failed');
+  }
+
+  return response.json();
+}
 
 // ============ News Store ============
 interface NewsState {
   newsItems: NewsItem[];
   isLoading: boolean;
-  userId: string | null;
-  unsubscribe: Unsubscribe | null;
+  isInitialized: boolean;
 
-  // Firestore integration
-  initializeListener: (userId: string) => void;
-  cleanup: () => void;
+  // Data fetching
+  fetchNews: () => Promise<void>;
 
-  // Actions (these now sync with Firestore)
+  // Actions
   addNewsItem: (item: Omit<NewsItem, 'id' | 'createdAt'>) => Promise<string | null>;
+  addNewsItems: (items: Omit<NewsItem, 'id' | 'createdAt'>[]) => Promise<void>;
   updateNewsItem: (id: string, updates: Partial<NewsItem>) => Promise<void>;
   deleteNewsItem: (id: string) => Promise<void>;
+  deleteAllNewsItems: () => Promise<void>;
   setNewsItems: (items: NewsItem[]) => void;
   addSummary: (id: string, summary: QuickSummary) => Promise<void>;
   toggleBookmark: (id: string) => Promise<void>;
   saveTranslation: (id: string, translatedContent: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useNewsStore = create<NewsState>((set, get) => ({
   newsItems: [],
-  isLoading: true,
-  userId: null,
-  unsubscribe: null,
+  isLoading: false,
+  isInitialized: false,
 
-  initializeListener: (userId: string) => {
-    // Clean up existing listener
-    get().cleanup();
+  fetchNews: async () => {
+    if (get().isLoading) return;
 
-    set({ userId, isLoading: true });
+    set({ isLoading: true });
 
-    const unsubscribe = subscribeToNewsItems(
-      userId,
-      (items) => {
-        set({ newsItems: items, isLoading: false });
-      },
-      (error) => {
-        console.error('News items subscription error:', error);
-        set({ isLoading: false });
-      }
-    );
-
-    set({ unsubscribe });
-  },
-
-  cleanup: () => {
-    const { unsubscribe } = get();
-    if (unsubscribe) {
-      unsubscribe();
-      set({ unsubscribe: null, userId: null, newsItems: [], isLoading: true });
+    try {
+      const items = await fetchApi<NewsItem[]>('/api/news');
+      // Convert date strings back to proper format
+      const formattedItems = items.map((item) => ({
+        ...item,
+        createdAt: item.createdAt,
+        publishedAt: item.publishedAt || undefined,
+        translatedAt: item.translatedAt || undefined,
+      }));
+      set({ newsItems: formattedItems, isInitialized: true });
+    } catch (error) {
+      console.error('Error fetching news:', error);
+    } finally {
+      set({ isLoading: false });
     }
   },
 
   addNewsItem: async (item) => {
-    const { userId } = get();
-    if (!userId) return null;
-
     // Optimistic update
     const tempId = `temp_${Date.now()}`;
     const tempItem: NewsItem = {
@@ -94,9 +83,17 @@ export const useNewsStore = create<NewsState>((set, get) => ({
     }));
 
     try {
-      const id = await firestoreAddNewsItem(userId, item);
-      // Firestore listener will update the state with the real item
-      return id;
+      const created = await fetchApi<NewsItem>('/api/news', {
+        method: 'POST',
+        body: JSON.stringify(item),
+      });
+
+      // Replace temp item with real item
+      set((state) => ({
+        newsItems: state.newsItems.map((n) => (n.id === tempId ? created : n)),
+      }));
+
+      return created.id;
     } catch (error) {
       // Rollback on error
       set((state) => ({
@@ -107,9 +104,25 @@ export const useNewsStore = create<NewsState>((set, get) => ({
     }
   },
 
+  addNewsItems: async (items) => {
+    if (items.length === 0) return;
+
+    try {
+      const created = await fetchApi<NewsItem[]>('/api/news', {
+        method: 'POST',
+        body: JSON.stringify(items),
+      });
+
+      set((state) => ({
+        newsItems: [...created, ...state.newsItems],
+      }));
+    } catch (error) {
+      console.error('Error adding news items:', error);
+    }
+  },
+
   updateNewsItem: async (id, updates) => {
-    const { userId, newsItems } = get();
-    if (!userId) return;
+    const { newsItems } = get();
 
     // Optimistic update
     const previousItems = newsItems;
@@ -120,7 +133,10 @@ export const useNewsStore = create<NewsState>((set, get) => ({
     }));
 
     try {
-      await firestoreUpdateNewsItem(userId, id, updates);
+      await fetchApi(`/api/news/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      });
     } catch (error) {
       // Rollback on error
       set({ newsItems: previousItems });
@@ -129,8 +145,7 @@ export const useNewsStore = create<NewsState>((set, get) => ({
   },
 
   deleteNewsItem: async (id) => {
-    const { userId, newsItems } = get();
-    if (!userId) return;
+    const { newsItems } = get();
 
     // Optimistic update
     const previousItems = newsItems;
@@ -139,11 +154,27 @@ export const useNewsStore = create<NewsState>((set, get) => ({
     }));
 
     try {
-      await firestoreDeleteNewsItem(userId, id);
+      await fetchApi(`/api/news/${id}`, { method: 'DELETE' });
     } catch (error) {
       // Rollback on error
       set({ newsItems: previousItems });
       console.error('Error deleting news item:', error);
+    }
+  },
+
+  deleteAllNewsItems: async () => {
+    const { newsItems } = get();
+
+    // Optimistic update
+    const previousItems = newsItems;
+    set({ newsItems: [] });
+
+    try {
+      await fetchApi('/api/news', { method: 'DELETE' });
+    } catch (error) {
+      // Rollback on error
+      set({ newsItems: previousItems });
+      console.error('Error deleting all news items:', error);
     }
   },
 
@@ -152,68 +183,25 @@ export const useNewsStore = create<NewsState>((set, get) => ({
   },
 
   addSummary: async (id, summary) => {
-    const { userId, newsItems } = get();
-    if (!userId) return;
-
-    // Optimistic update
-    const previousItems = newsItems;
-    set((state) => ({
-      newsItems: state.newsItems.map((item) =>
-        item.id === id ? { ...item, quickSummary: summary, isProcessed: true } : item
-      ),
-    }));
-
-    try {
-      await addSummaryToNewsItem(userId, id, summary);
-    } catch (error) {
-      // Rollback on error
-      set({ newsItems: previousItems });
-      console.error('Error adding summary:', error);
-    }
+    await get().updateNewsItem(id, { quickSummary: summary, isProcessed: true });
   },
 
   toggleBookmark: async (id) => {
-    const { userId, newsItems } = get();
-    if (!userId) return;
+    const item = get().newsItems.find((n) => n.id === id);
+    if (!item) return;
 
-    // Optimistic update
-    const previousItems = newsItems;
-    set((state) => ({
-      newsItems: state.newsItems.map((item) =>
-        item.id === id ? { ...item, isBookmarked: !item.isBookmarked } : item
-      ),
-    }));
-
-    try {
-      await firestoreToggleBookmark(userId, id);
-    } catch (error) {
-      // Rollback on error
-      set({ newsItems: previousItems });
-      console.error('Error toggling bookmark:', error);
-    }
+    await get().updateNewsItem(id, { isBookmarked: !item.isBookmarked });
   },
 
   saveTranslation: async (id, translatedContent) => {
-    const { userId, newsItems } = get();
-    if (!userId) return;
+    await get().updateNewsItem(id, {
+      translatedContent,
+      translatedAt: new Date().toISOString(),
+    });
+  },
 
-    // Optimistic update
-    const previousItems = newsItems;
-    set((state) => ({
-      newsItems: state.newsItems.map((item) =>
-        item.id === id
-          ? { ...item, translatedContent, translatedAt: new Date().toISOString() }
-          : item
-      ),
-    }));
-
-    try {
-      await firestoreSaveTranslation(userId, id, translatedContent);
-    } catch (error) {
-      // Rollback on error
-      set({ newsItems: previousItems });
-      console.error('Error saving translation:', error);
-    }
+  reset: () => {
+    set({ newsItems: [], isLoading: false, isInitialized: false });
   },
 }));
 
@@ -221,12 +209,10 @@ export const useNewsStore = create<NewsState>((set, get) => ({
 interface SourcesState {
   sources: Source[];
   isLoading: boolean;
-  userId: string | null;
-  unsubscribe: Unsubscribe | null;
+  isInitialized: boolean;
 
-  // Firestore integration
-  initializeListener: (userId: string) => void;
-  cleanup: () => void;
+  // Data fetching
+  fetchSources: () => Promise<void>;
 
   // Actions
   addSource: (source: Omit<Source, 'id'>) => Promise<string | null>;
@@ -235,50 +221,36 @@ interface SourcesState {
   setSources: (sources: Source[]) => void;
   initDefaults: () => Promise<void>;
   removeDuplicates: () => Promise<void>;
+  reset: () => void;
 }
 
 export const useSourcesStore = create<SourcesState>((set, get) => ({
   sources: [],
-  isLoading: true,
-  userId: null,
-  unsubscribe: null,
+  isLoading: false,
+  isInitialized: false,
 
-  initializeListener: (userId: string) => {
-    // Clean up existing listener
-    get().cleanup();
+  fetchSources: async () => {
+    if (get().isLoading) return;
 
-    set({ userId, isLoading: true });
+    set({ isLoading: true });
 
-    const unsubscribe = subscribeToSources(
-      userId,
-      (sources) => {
-        set({ sources, isLoading: false });
+    try {
+      const sources = await fetchApi<Source[]>('/api/sources');
+      set({ sources, isInitialized: true });
 
-        // Initialize defaults if no sources exist
-        if (sources.length === 0) {
-          get().initDefaults();
-        }
-      },
-      (error) => {
-        console.error('Sources subscription error:', error);
-        set({ isLoading: false });
+      // Initialize defaults if no sources exist
+      if (sources.length === 0) {
+        get().initDefaults();
       }
-    );
-
-    set({ unsubscribe });
-  },
-
-  cleanup: () => {
-    const { unsubscribe } = get();
-    if (unsubscribe) {
-      unsubscribe();
-      set({ unsubscribe: null, userId: null, sources: [], isLoading: true });
+    } catch (error) {
+      console.error('Error fetching sources:', error);
+    } finally {
+      set({ isLoading: false });
     }
   },
 
   addSource: async (source) => {
-    const { userId, sources } = get();
-    if (!userId) return null;
+    const { sources } = get();
 
     // Check for duplicate by websiteUrl
     const isDuplicate = sources.some(
@@ -301,8 +273,17 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
     }));
 
     try {
-      const id = await firestoreAddSource(userId, source);
-      return id;
+      const created = await fetchApi<Source>('/api/sources', {
+        method: 'POST',
+        body: JSON.stringify(source),
+      });
+
+      // Replace temp with real
+      set((state) => ({
+        sources: state.sources.map((s) => (s.id === tempId ? created : s)),
+      }));
+
+      return created.id;
     } catch (error) {
       // Rollback on error
       set((state) => ({
@@ -314,8 +295,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
   },
 
   updateSource: async (id, updates) => {
-    const { userId, sources } = get();
-    if (!userId) return;
+    const { sources } = get();
 
     // Optimistic update
     const previousSources = sources;
@@ -326,7 +306,10 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
     }));
 
     try {
-      await firestoreUpdateSource(userId, id, updates);
+      await fetchApi(`/api/sources/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      });
     } catch (error) {
       // Rollback on error
       set({ sources: previousSources });
@@ -335,8 +318,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
   },
 
   deleteSource: async (id) => {
-    const { userId, sources } = get();
-    if (!userId) return;
+    const { sources } = get();
 
     // Optimistic update
     const previousSources = sources;
@@ -345,7 +327,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
     }));
 
     try {
-      await firestoreDeleteSource(userId, id);
+      await fetchApi(`/api/sources/${id}`, { method: 'DELETE' });
     } catch (error) {
       // Rollback on error
       set({ sources: previousSources });
@@ -358,8 +340,7 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
   },
 
   initDefaults: async () => {
-    const { userId, sources } = get();
-    if (!userId) return;
+    const { sources } = get();
 
     try {
       // Get existing source URLs to avoid duplicates
@@ -368,22 +349,22 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
       );
 
       // Filter out sources that already exist
-      const newSources = DEFAULT_SOURCES
-        .filter((s) => !existingUrls.has(s.websiteUrl.toLowerCase()))
-        .map(({ id, ...rest }) => rest);
+      const newSources = DEFAULT_SOURCES.filter(
+        (s) => !existingUrls.has(s.websiteUrl.toLowerCase())
+      );
 
-      if (newSources.length > 0) {
-        await batchAddSources(userId, newSources);
+      // Add each source
+      for (const source of newSources) {
+        const { id, ...sourceData } = source;
+        await get().addSource(sourceData);
       }
     } catch (error) {
       console.error('Error initializing default sources:', error);
     }
   },
 
-  // Remove duplicate sources (keeps the first occurrence)
   removeDuplicates: async () => {
-    const { userId, sources } = get();
-    if (!userId) return;
+    const { sources, deleteSource } = get();
 
     const seen = new Map<string, string>(); // url -> id (first occurrence)
     const duplicateIds: string[] = [];
@@ -406,12 +387,12 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
 
     // Delete duplicates
     for (const id of duplicateIds) {
-      try {
-        await firestoreDeleteSource(userId, id);
-      } catch (error) {
-        console.error('Error deleting duplicate source:', id, error);
-      }
+      await deleteSource(id);
     }
+  },
+
+  reset: () => {
+    set({ sources: [], isLoading: false, isInitialized: false });
   },
 }));
 
@@ -419,12 +400,10 @@ export const useSourcesStore = create<SourcesState>((set, get) => ({
 interface StyleTemplatesState {
   templates: StyleTemplate[];
   isLoading: boolean;
-  userId: string | null;
-  unsubscribe: Unsubscribe | null;
+  isInitialized: boolean;
 
-  // Firestore integration
-  initializeListener: (userId: string) => void;
-  cleanup: () => void;
+  // Data fetching
+  fetchTemplates: () => Promise<void>;
 
   // Actions
   addTemplate: (template: Omit<StyleTemplate, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string | null>;
@@ -433,45 +412,31 @@ interface StyleTemplatesState {
   setDefault: (platform: Platform, id: string) => Promise<void>;
   getByPlatform: (platform: Platform) => StyleTemplate[];
   getDefault: (platform: Platform) => StyleTemplate | undefined;
+  reset: () => void;
 }
 
 export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => ({
   templates: [],
-  isLoading: true,
-  userId: null,
-  unsubscribe: null,
+  isLoading: false,
+  isInitialized: false,
 
-  initializeListener: (userId: string) => {
-    // Clean up existing listener
-    get().cleanup();
+  fetchTemplates: async () => {
+    if (get().isLoading) return;
 
-    set({ userId, isLoading: true });
+    set({ isLoading: true });
 
-    const unsubscribe = subscribeToStyleTemplates(
-      userId,
-      (templates) => {
-        set({ templates, isLoading: false });
-      },
-      (error) => {
-        console.error('Style templates subscription error:', error);
-        set({ isLoading: false });
-      }
-    );
-
-    set({ unsubscribe });
-  },
-
-  cleanup: () => {
-    const { unsubscribe } = get();
-    if (unsubscribe) {
-      unsubscribe();
-      set({ unsubscribe: null, userId: null, templates: [], isLoading: true });
+    try {
+      const templates = await fetchApi<StyleTemplate[]>('/api/templates');
+      set({ templates, isInitialized: true });
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    } finally {
+      set({ isLoading: false });
     }
   },
 
   addTemplate: async (template) => {
-    const { userId, templates } = get();
-    if (!userId) return null;
+    const { templates } = get();
 
     // Check if this is the first template for this platform
     const isFirstForPlatform = !templates.some((t) => t.platform === template.platform);
@@ -492,11 +457,20 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => 
     }));
 
     try {
-      const id = await firestoreAddStyleTemplate(userId, {
-        ...template,
-        isDefault: isFirstForPlatform,
+      const created = await fetchApi<StyleTemplate>('/api/templates', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...template,
+          isDefault: isFirstForPlatform,
+        }),
       });
-      return id;
+
+      // Replace temp with real
+      set((state) => ({
+        templates: state.templates.map((t) => (t.id === tempId ? created : t)),
+      }));
+
+      return created.id;
     } catch (error) {
       // Rollback on error
       set((state) => ({
@@ -508,8 +482,7 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => 
   },
 
   updateTemplate: async (id, updates) => {
-    const { userId, templates } = get();
-    if (!userId) return;
+    const { templates } = get();
 
     // Optimistic update
     const previousTemplates = templates;
@@ -522,7 +495,10 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => 
     }));
 
     try {
-      await firestoreUpdateStyleTemplate(userId, id, updates);
+      await fetchApi(`/api/templates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      });
     } catch (error) {
       // Rollback on error
       set({ templates: previousTemplates });
@@ -531,8 +507,7 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => 
   },
 
   deleteTemplate: async (id) => {
-    const { userId, templates } = get();
-    if (!userId) return;
+    const { templates } = get();
 
     const template = templates.find((t) => t.id === id);
     if (!template) return;
@@ -557,10 +532,13 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => 
     });
 
     try {
-      await firestoreDeleteStyleTemplate(userId, id);
-      // If there was a new default, update it in Firestore
+      await fetchApi(`/api/templates/${id}`, { method: 'DELETE' });
+      // If there was a new default, update it
       if (newDefault) {
-        await firestoreUpdateStyleTemplate(userId, newDefault.id, { isDefault: true });
+        await fetchApi(`/api/templates/${newDefault.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ isDefault: true }),
+        });
       }
     } catch (error) {
       // Rollback on error
@@ -570,8 +548,7 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => 
   },
 
   setDefault: async (platform, id) => {
-    const { userId, templates } = get();
-    if (!userId) return;
+    const { templates } = get();
 
     // Optimistic update
     const previousTemplates = templates;
@@ -583,7 +560,22 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => 
     }));
 
     try {
-      await setDefaultStyleTemplate(userId, platform, id);
+      // Update old default to false
+      const oldDefault = previousTemplates.find(
+        (t) => t.platform === platform && t.isDefault && t.id !== id
+      );
+      if (oldDefault) {
+        await fetchApi(`/api/templates/${oldDefault.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ isDefault: false }),
+        });
+      }
+
+      // Update new default to true
+      await fetchApi(`/api/templates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isDefault: true }),
+      });
     } catch (error) {
       // Rollback on error
       set({ templates: previousTemplates });
@@ -597,6 +589,10 @@ export const useStyleTemplatesStore = create<StyleTemplatesState>((set, get) => 
 
   getDefault: (platform) => {
     return get().templates.find((t) => t.platform === platform && t.isDefault);
+  },
+
+  reset: () => {
+    set({ templates: [], isLoading: false, isInitialized: false });
   },
 }));
 

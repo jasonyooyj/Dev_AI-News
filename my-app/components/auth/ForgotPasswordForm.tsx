@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { resetPassword } from '@/lib/firebase/auth';
 import { Mail, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -29,20 +28,22 @@ export function ForgotPasswordForm() {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setError(null);
     try {
-      await resetPassword(data.email);
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send reset email');
+      }
+
       setIsSuccess(true);
     } catch (err) {
       if (err instanceof Error) {
-        // Handle Firebase auth errors
-        if (err.message.includes('user-not-found')) {
-          setError('No account found with this email address.');
-        } else if (err.message.includes('invalid-email')) {
-          setError('Please enter a valid email address.');
-        } else if (err.message.includes('too-many-requests')) {
-          setError('Too many requests. Please try again later.');
-        } else {
-          setError('Failed to send reset email. Please try again.');
-        }
+        setError(err.message);
       } else {
         setError('An unexpected error occurred. Please try again.');
       }
@@ -59,7 +60,7 @@ export function ForgotPasswordForm() {
           Check your email
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          We&apos;ve sent a password reset link to your email address. Please check your inbox and follow the instructions.
+          If an account exists with this email, you will receive a password reset link.
         </p>
         <Link
           href="/login"

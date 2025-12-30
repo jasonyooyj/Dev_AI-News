@@ -4,8 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { useState } from 'react';
 import { AuthProvider } from '@/components/auth/AuthProvider';
-import { FirestoreSyncProvider } from '@/components/FirestoreSyncProvider';
-import { MigrationDialog } from '@/components/migration/MigrationDialog';
+import { DataInitializer } from '@/components/DataInitializer';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -24,10 +23,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <FirestoreSyncProvider>
-          {children}
-          <MigrationDialog />
-        </FirestoreSyncProvider>
+        <DataInitializer />
+        {children}
       </AuthProvider>
       <Toaster
         position="bottom-right"

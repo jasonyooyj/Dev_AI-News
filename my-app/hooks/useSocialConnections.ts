@@ -1,15 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './useAuth';
-import {
-  getSocialConnections,
-  getSocialConnectionByPlatform,
-  addSocialConnection,
-  disconnectSocialPlatform,
-  subscribeToSocialConnections,
-  addPublishHistory,
-} from '@/lib/firebase/firestore';
+import { useSession } from 'next-auth/react';
 import type { SocialConnection, SocialPlatform, PublishResult } from '@/types/news';
 import { toast } from 'sonner';
 
@@ -60,38 +52,37 @@ interface UseSocialConnectionsReturn {
 }
 
 export function useSocialConnections(): UseSocialConnectionsReturn {
-  const { user } = useAuth();
+  const { data: session } = useSession();
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   // Fetch connections on mount
-  useEffect(() => {
-    if (!user) {
+  const fetchConnections = useCallback(async () => {
+    if (!session?.user) {
       setConnections([]);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
+    try {
+      const response = await fetch('/api/social/connections');
+      if (!response.ok) throw new Error('Failed to fetch connections');
+      const data = await response.json();
+      setConnections(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching social connections:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch connections'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session?.user]);
 
-    // Subscribe to real-time updates
-    const unsubscribe = subscribeToSocialConnections(
-      user.uid,
-      (updatedConnections) => {
-        setConnections(updatedConnections);
-        setIsLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error('Error fetching social connections:', err);
-        setError(err);
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user]);
+  useEffect(() => {
+    fetchConnections();
+  }, [fetchConnections]);
 
   // Get a specific connection by platform
   const getConnection = useCallback(
@@ -100,6 +91,26 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
     },
     [connections]
   );
+
+  // Helper to save connection
+  const saveConnection = async (data: {
+    platform: SocialPlatform;
+    handle: string;
+    isConnected: boolean;
+    credentials: Record<string, string | undefined>;
+  }) => {
+    const response = await fetch('/api/social/connections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save connection');
+    }
+
+    await fetchConnections();
+  };
 
   // Connect Bluesky account
   const connectBluesky = useCallback(
@@ -110,12 +121,12 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         appPassword: string;
       };
     }) => {
-      if (!user) {
+      if (!session?.user) {
         throw new Error('User not authenticated');
       }
 
       try {
-        await addSocialConnection(user.uid, {
+        await saveConnection({
           platform: 'bluesky',
           handle: data.handle,
           isConnected: true,
@@ -132,7 +143,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    [session?.user]
   );
 
   // Connect Threads account
@@ -145,12 +156,12 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         expiresAt: string;
       };
     }) => {
-      if (!user) {
+      if (!session?.user) {
         throw new Error('User not authenticated');
       }
 
       try {
-        await addSocialConnection(user.uid, {
+        await saveConnection({
           platform: 'threads',
           handle: data.username,
           isConnected: true,
@@ -168,7 +179,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    [session?.user]
   );
 
   // Connect LinkedIn account
@@ -182,12 +193,12 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         refreshToken?: string;
       };
     }) => {
-      if (!user) {
+      if (!session?.user) {
         throw new Error('User not authenticated');
       }
 
       try {
-        await addSocialConnection(user.uid, {
+        await saveConnection({
           platform: 'linkedin',
           handle: data.name,
           isConnected: true,
@@ -206,7 +217,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    [session?.user]
   );
 
   // Connect Instagram account
@@ -219,12 +230,12 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         expiresAt: string;
       };
     }) => {
-      if (!user) {
+      if (!session?.user) {
         throw new Error('User not authenticated');
       }
 
       try {
-        await addSocialConnection(user.uid, {
+        await saveConnection({
           platform: 'instagram',
           handle: data.username,
           isConnected: true,
@@ -242,18 +253,27 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    [session?.user]
   );
 
   // Disconnect a platform
   const disconnect = useCallback(
     async (platform: SocialPlatform) => {
-      if (!user) {
+      if (!session?.user) {
         throw new Error('User not authenticated');
       }
 
+      const connection = connections.find((c) => c.platform === platform);
+      if (!connection) return;
+
       try {
-        await disconnectSocialPlatform(user.uid, platform);
+        const response = await fetch(`/api/social/connections/${connection.id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) throw new Error('Failed to disconnect');
+
+        await fetchConnections();
         toast.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} disconnected`);
       } catch (err) {
         console.error('Error disconnecting platform:', err);
@@ -261,46 +281,29 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [user]
+    [session?.user, connections, fetchConnections]
   );
 
   // Save publish result to history
   const savePublishResult = useCallback(
     async (newsItemId: string, content: string, results: PublishResult[]) => {
-      if (!user) {
+      if (!session?.user) {
         throw new Error('User not authenticated');
       }
 
       try {
-        await addPublishHistory(user.uid, {
-          newsItemId,
-          content,
-          results,
+        await fetch('/api/publish-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newsItemId, content, results }),
         });
       } catch (err) {
         console.error('Error saving publish history:', err);
         // Don't throw - this is non-critical
       }
     },
-    [user]
+    [session?.user]
   );
-
-  // Manual refetch
-  const refetch = useCallback(async () => {
-    if (!user) return;
-
-    setIsLoading(true);
-    try {
-      const updatedConnections = await getSocialConnections(user.uid);
-      setConnections(updatedConnections);
-      setError(null);
-    } catch (err) {
-      console.error('Error refetching connections:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch connections'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
 
   return {
     connections,
@@ -313,7 +316,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
     connectInstagram,
     disconnect,
     savePublishResult,
-    refetch,
+    refetch: fetchConnections,
   };
 }
 
