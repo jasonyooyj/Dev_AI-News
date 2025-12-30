@@ -76,13 +76,18 @@ export function useMigration(): MigrationState & MigrationActions {
       const templatesRaw = localStorage.getItem(STORAGE_KEYS.STYLE_TEMPLATES);
 
       // Parse Zustand persist format
-      const parseZustandState = <T>(raw: string | null, key: string): T[] => {
+      const parseZustandState = <T>(raw: string | null, key: string, fallbackKey?: string): T[] => {
         if (!raw) return [];
         try {
           const parsed = JSON.parse(raw);
           // Zustand persist stores data in { state: { [key]: data }, version: number }
           if (parsed.state && Array.isArray(parsed.state[key])) {
             return parsed.state[key];
+          }
+          // Try fallback key if provided
+          if (fallbackKey && parsed.state && Array.isArray(parsed.state[fallbackKey])) {
+            console.log('Migration: Found data using fallback key:', fallbackKey);
+            return parsed.state[fallbackKey];
           }
           // Fallback to direct array
           if (Array.isArray(parsed)) {
@@ -96,9 +101,20 @@ export function useMigration(): MigrationState & MigrationActions {
 
       const sources = parseZustandState<Source>(sourcesRaw, 'sources');
       const newsItems = parseZustandState<NewsItem>(newsItemsRaw, 'newsItems');
-      const styleTemplates = parseZustandState<StyleTemplate>(templatesRaw, 'templates');
+      const styleTemplates = parseZustandState<StyleTemplate>(templatesRaw, 'templates', 'styleTemplates');
 
       const hasData = sources.length > 0 || newsItems.length > 0 || styleTemplates.length > 0;
+
+      console.log('Migration Check:', {
+        sourcesCount: sources.length,
+        newsItemsCount: newsItems.length,
+        templatesCount: styleTemplates.length,
+        rawKeysFound: {
+          sources: !!sourcesRaw,
+          newsItems: !!newsItemsRaw,
+          templates: !!templatesRaw
+        }
+      });
 
       setData({
         sources,
@@ -116,74 +132,6 @@ export function useMigration(): MigrationState & MigrationActions {
     }
   }, [wasDismissed]);
 
-  // Migrate data to Firestore
-  const migrateToFirestore = useCallback(async (userId: string): Promise<boolean> => {
-    if (!data) return false;
-
-    setIsMigrating(true);
-    setError(null);
-
-    const total = data.sources.length + data.newsItems.length + data.styleTemplates.length;
-    let completed = 0;
-
-    try {
-      // Step 1: Migrate sources
-      setProgress({ total, completed, currentStep: 'sources' });
-
-      if (data.sources.length > 0) {
-        // Remove id field from sources before migrating
-        const sourcesWithoutId = data.sources.map(({ id, ...rest }) => rest);
-        await batchAddSources(userId, sourcesWithoutId);
-        completed += data.sources.length;
-        setProgress({ total, completed, currentStep: 'sources' });
-      }
-
-      // Step 2: Migrate news items
-      setProgress({ total, completed, currentStep: 'newsItems' });
-
-      if (data.newsItems.length > 0) {
-        // Migrate in batches of 500 (Firestore limit)
-        const BATCH_SIZE = 500;
-        for (let i = 0; i < data.newsItems.length; i += BATCH_SIZE) {
-          const batch = data.newsItems.slice(i, i + BATCH_SIZE);
-          const itemsWithoutId = batch.map(({ id, createdAt, ...rest }) => ({
-            ...rest,
-            // Keep createdAt but let it be converted
-          }));
-          await batchAddNewsItems(userId, itemsWithoutId as Omit<NewsItem, 'id' | 'createdAt'>[]);
-          completed += batch.length;
-          setProgress({ total, completed, currentStep: 'newsItems' });
-        }
-      }
-
-      // Step 3: Migrate style templates
-      setProgress({ total, completed, currentStep: 'styleTemplates' });
-
-      if (data.styleTemplates.length > 0) {
-        const templatesWithoutId = data.styleTemplates.map(
-          ({ id, createdAt, updatedAt, ...rest }) => rest
-        );
-        await batchAddStyleTemplates(userId, templatesWithoutId);
-        completed += data.styleTemplates.length;
-        setProgress({ total, completed, currentStep: 'styleTemplates' });
-      }
-
-      // Done
-      setProgress({ total, completed, currentStep: 'done' });
-      setIsMigrating(false);
-
-      // Clear localStorage after successful migration
-      clearLocalStorage();
-
-      return true;
-    } catch (err) {
-      console.error('Migration error:', err);
-      setError(err instanceof Error ? err.message : 'Migration failed');
-      setIsMigrating(false);
-      return false;
-    }
-  }, [data]);
-
   // Clear localStorage data
   const clearLocalStorage = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -199,6 +147,103 @@ export function useMigration(): MigrationState & MigrationActions {
       console.error('Error clearing localStorage:', err);
     }
   }, []);
+
+  // Migrate data to Firestore
+  const migrateToFirestore = useCallback(async (userId: string): Promise<boolean> => {
+    if (!data) {
+      console.error('Migration: No data to migrate');
+      return false;
+    }
+
+    setIsMigrating(true);
+    setError(null);
+
+    const total = data.sources.length + data.newsItems.length + data.styleTemplates.length;
+    let completed = 0;
+
+    console.log('Migration started:', { total, sources: data.sources.length, newsItems: data.newsItems.length, templates: data.styleTemplates.length });
+
+    try {
+      // Step 1: Migrate sources
+      setProgress({ total, completed, currentStep: 'sources' });
+      console.log('Migration: Starting sources migration');
+
+      if (data.sources.length > 0) {
+        // Remove id field before migrating, but keep everything else including optional dates
+        const sourcesWithoutId = data.sources.map(({ id, ...rest }) => rest);
+        console.log('Migration: Adding sources to Firestore', sourcesWithoutId.length);
+        await batchAddSources(userId, sourcesWithoutId);
+        completed += data.sources.length;
+        setProgress({ total, completed, currentStep: 'sources' });
+        console.log('Migration: Sources completed', completed, '/', total);
+      } else {
+        console.log('Migration: No sources to migrate');
+      }
+
+      // Step 2: Migrate news items
+      setProgress({ total, completed, currentStep: 'newsItems' });
+      console.log('Migration: Starting news items migration');
+
+      if (data.newsItems.length > 0) {
+        // Migrate in batches of 500 (Firestore limit)
+        const BATCH_SIZE = 500;
+        for (let i = 0; i < data.newsItems.length; i += BATCH_SIZE) {
+          const batch = data.newsItems.slice(i, i + BATCH_SIZE);
+          // Keep createdAt if it exists to preserve history
+          const itemsWithoutId = batch.map(({ id, ...rest }) => ({
+            ...rest
+          }));
+          console.log('Migration: Adding news items batch', i / BATCH_SIZE + 1, 'of', Math.ceil(data.newsItems.length / BATCH_SIZE));
+          await batchAddNewsItems(userId, itemsWithoutId);
+          completed += batch.length;
+          setProgress({ total, completed, currentStep: 'newsItems' });
+          console.log('Migration: News items progress', completed, '/', total);
+        }
+      } else {
+        console.log('Migration: No news items to migrate');
+      }
+
+      // Step 3: Migrate style templates
+      setProgress({ total, completed, currentStep: 'styleTemplates' });
+      console.log('Migration: Starting style templates migration');
+
+      if (data.styleTemplates.length > 0) {
+        const templatesWithoutId = data.styleTemplates.map(
+          ({ id, ...rest }) => rest
+        );
+        console.log('Migration: Adding style templates to Firestore', templatesWithoutId.length);
+        await batchAddStyleTemplates(userId, templatesWithoutId);
+        completed += data.styleTemplates.length;
+        setProgress({ total, completed, currentStep: 'styleTemplates' });
+        console.log('Migration: Style templates completed', completed, '/', total);
+      } else {
+        console.log('Migration: No style templates to migrate');
+      }
+
+      // Done
+      setProgress({ total, completed, currentStep: 'done' });
+      console.log('Migration: Complete!', completed, '/', total);
+      setIsMigrating(false);
+
+      // Clear localStorage after successful migration
+      clearLocalStorage();
+
+      return true;
+    } catch (err) {
+      console.error('Migration error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Migration failed';
+      console.error('Migration error details:', {
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : undefined,
+        completed,
+        total,
+      });
+      setError(errorMessage);
+      setIsMigrating(false);
+      setProgress({ total, completed, currentStep: 'sources' }); // Reset progress on error
+      return false;
+    }
+  }, [data, clearLocalStorage]);
 
   // Dismiss migration (don't show again)
   const dismissMigration = useCallback(() => {
