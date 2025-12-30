@@ -17,6 +17,16 @@ export const newsCategoryEnum = pgEnum('news_category', [
   'other',
 ]);
 
+export const priorityEnum = pgEnum('priority', ['high', 'medium', 'low']);
+
+export const sourceTypeEnum = pgEnum('source_type', [
+  'rss',
+  'youtube',
+  'twitter',
+  'threads',
+  'blog',
+]);
+
 export const platformEnum = pgEnum('platform', [
   'twitter',
   'threads',
@@ -53,6 +63,8 @@ export const sources = pgTable('sources', {
   websiteUrl: text('website_url').notNull(),
   isActive: boolean('is_active').default(true).notNull(),
   lastFetchedAt: timestamp('last_fetched_at'),
+  priority: priorityEnum('priority').default('medium').notNull(),
+  type: sourceTypeEnum('type').default('rss').notNull(),
   scrapeConfig: jsonb('scrape_config').$type<{
     articleSelector: string;
     titleSelector: string;
@@ -79,6 +91,8 @@ export const newsItems = pgTable('news_items', {
   publishedAt: timestamp('published_at'),
   isProcessed: boolean('is_processed').default(false).notNull(),
   isBookmarked: boolean('is_bookmarked').default(false).notNull(),
+  priority: priorityEnum('priority').default('medium').notNull(),
+  mediaUrls: jsonb('media_urls').$type<string[]>().default([]),
   // Quick summary as JSONB
   quickSummary: jsonb('quick_summary').$type<{
     bullets: string[];

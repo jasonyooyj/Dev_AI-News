@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
-import { NewsItem, Source, NewsCategory, NEWS_CATEGORY_LABELS } from '@/types/news';
+import { NewsItem, Source, NewsCategory, NEWS_CATEGORY_LABELS, PRIORITY_LABELS, Priority } from '@/types/news';
 import { formatCompactDate } from '@/lib/date';
 
 interface NewsCardProps {
@@ -30,6 +30,12 @@ const categoryVariants: Record<NewsCategory, 'info' | 'success' | 'warning' | 'd
   research: 'warning',
   announcement: 'danger',
   other: 'default',
+};
+
+const priorityStyles: Record<Priority, { bg: string; text: string; dot: string }> = {
+  high: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500' },
+  medium: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300', dot: 'bg-yellow-500' },
+  low: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
 };
 
 function SummarySkeleton() {
@@ -72,14 +78,24 @@ export const NewsCard = memo(function NewsCard({
 }: NewsCardProps) {
   const hasQuickSummary = news.quickSummary && news.quickSummary.bullets.length > 0;
   const isBookmarked = news.isBookmarked ?? false;
+  const priority = news.priority || 'medium';
+  const priorityStyle = priorityStyles[priority];
 
   return (
     <Card
       variant="default"
       padding="none"
-      className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden"
+      className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden relative"
     >
-      <div className="p-4 sm:p-5">
+      {/* Priority Badge - 카드 좌상단 */}
+      {priority !== 'medium' && (
+        <div className={`absolute top-0 left-0 px-2 py-1 text-xs font-medium rounded-br-lg ${priorityStyle.bg} ${priorityStyle.text} flex items-center gap-1.5`}>
+          <span className={`w-2 h-2 rounded-full ${priorityStyle.dot}`} />
+          {PRIORITY_LABELS[priority]}
+        </div>
+      )}
+
+      <div className={`p-4 sm:p-5 ${priority !== 'medium' ? 'pt-8' : ''}`}>
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">

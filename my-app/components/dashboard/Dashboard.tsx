@@ -196,6 +196,8 @@ export function Dashboard() {
         originalContent: data.content,
         url: data.url,
         publishedAt: new Date().toISOString(),
+        priority: defaultSource.priority || 'medium',
+        mediaUrls: [],
       });
     }
   }, [activeSources, addNewsItem]);

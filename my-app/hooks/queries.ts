@@ -199,6 +199,8 @@ export function useFetchRss() {
             url: item.link,
             publishedAt: item.pubDate || new Date().toISOString(),
             isProcessed: false,
+            priority: source.priority || 'medium',
+            mediaUrls: [],
           });
           existingUrls.add(item.link); // Prevent duplicates within same batch
           addedCount++;
@@ -236,6 +238,8 @@ export function useScrapeUrl() {
           url,
           publishedAt: new Date().toISOString(),
           isProcessed: false,
+          priority: defaultSource.priority || 'medium',
+          mediaUrls: [],
         });
         toast.success('Article scraped and saved');
       } else {

@@ -74,6 +74,8 @@ export function SourceForm({
       websiteUrl: data.websiteUrl.trim(),
       rssUrl: data.rssUrl?.trim() || undefined,
       isActive: data.isActive,
+      priority: source?.priority || 'medium',
+      type: source?.type || 'rss',
     });
   };
 

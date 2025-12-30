@@ -1,3 +1,9 @@
+// 우선순위 타입
+export type Priority = 'high' | 'medium' | 'low';
+
+// 소스 타입
+export type SourceType = 'rss' | 'youtube' | 'twitter' | 'threads' | 'blog';
+
 export interface Source {
   id: string;
   name: string;
@@ -7,6 +13,8 @@ export interface Source {
   websiteUrl: string;
   isActive: boolean;
   lastFetchedAt?: string;
+  priority: Priority;
+  type: SourceType;
   // Scraping configuration for non-RSS sources
   scrapeConfig?: {
     articleSelector: string;      // CSS selector for article list items
@@ -49,6 +57,8 @@ export interface NewsItem {
   publishedAt?: string;
   isProcessed: boolean;
   isBookmarked?: boolean;  // 북마크 여부
+  priority: Priority;      // 우선순위
+  mediaUrls?: string[];    // 이미지/영상 URL 배열
   createdAt: string;
   quickSummary?: QuickSummary;  // 3줄 핵심 요약
   translatedContent?: string;   // 번역된 전체 기사 (캐시)
@@ -128,6 +138,26 @@ export const NEWS_CATEGORY_LABELS: Record<NewsCategory, string> = {
   research: '연구',
   announcement: '발표',
   other: '기타',
+};
+
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  high: '높음',
+  medium: '보통',
+  low: '낮음',
+};
+
+export const PRIORITY_COLORS: Record<Priority, string> = {
+  high: '#ef4444',    // red-500
+  medium: '#eab308',  // yellow-500
+  low: '#3b82f6',     // blue-500
+};
+
+export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
+  rss: 'RSS',
+  youtube: 'YouTube',
+  twitter: 'Twitter/X',
+  threads: 'Threads',
+  blog: '블로그',
 };
 
 export const PLATFORM_CONFIGS: Record<Platform, PlatformConfig> = {

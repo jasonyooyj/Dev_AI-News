@@ -9,6 +9,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://openai.com/blog/rss.xml',
     websiteUrl: 'https://openai.com/blog',
     isActive: true,
+    priority: 'high',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -16,6 +18,8 @@ export const DEFAULT_SOURCES: Source[] = [
     description: 'Claude AI를 만든 Anthropic의 AI 안전성 연구 및 기업 소식',
     websiteUrl: 'https://www.anthropic.com/news',
     isActive: true,
+    priority: 'high',
+    type: 'blog',
     scrapeConfig: {
       articleSelector: 'a[href*="/news/"]',
       titleSelector: 'h3, .title, span',
@@ -30,6 +34,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://blog.google/technology/ai/rss/',
     websiteUrl: 'https://blog.google/technology/ai/',
     isActive: true,
+    priority: 'high',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -37,6 +43,8 @@ export const DEFAULT_SOURCES: Source[] = [
     description: 'LLaMA, SAM 등 Meta의 오픈소스 AI 연구 및 메타버스 기술',
     websiteUrl: 'https://ai.meta.com/blog/',
     isActive: true,
+    priority: 'medium',
+    type: 'blog',
     scrapeConfig: {
       articleSelector: 'article, .blog-post, a[href*="/blog/"]',
       titleSelector: 'h2, h3, .title',
@@ -51,6 +59,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://huggingface.co/blog/feed.xml',
     websiteUrl: 'https://huggingface.co/blog',
     isActive: true,
+    priority: 'medium',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -59,6 +69,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://deepmind.google/blog/rss.xml',
     websiteUrl: 'https://deepmind.google/discover/blog/',
     isActive: true,
+    priority: 'medium',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -67,6 +79,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://blogs.nvidia.com/blog/category/deep-learning/feed/',
     websiteUrl: 'https://blogs.nvidia.com/blog/category/deep-learning/',
     isActive: true,
+    priority: 'medium',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -75,6 +89,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://blogs.microsoft.com/ai/feed/',
     websiteUrl: 'https://blogs.microsoft.com/ai/',
     isActive: true,
+    priority: 'medium',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -83,6 +99,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://aws.amazon.com/blogs/machine-learning/feed/',
     websiteUrl: 'https://aws.amazon.com/blogs/machine-learning/',
     isActive: true,
+    priority: 'low',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -91,6 +109,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://www.technologyreview.com/topic/artificial-intelligence/feed/',
     websiteUrl: 'https://www.technologyreview.com/topic/artificial-intelligence/',
     isActive: true,
+    priority: 'medium',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -99,6 +119,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml',
     websiteUrl: 'https://www.theverge.com/ai-artificial-intelligence',
     isActive: true,
+    priority: 'low',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -107,6 +129,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://venturebeat.com/category/ai/feed/',
     websiteUrl: 'https://venturebeat.com/category/ai/',
     isActive: true,
+    priority: 'low',
+    type: 'rss',
   },
   {
     id: uuidv4(),
@@ -115,6 +139,8 @@ export const DEFAULT_SOURCES: Source[] = [
     rssUrl: 'https://the-decoder.com/feed/',
     websiteUrl: 'https://the-decoder.com/',
     isActive: true,
+    priority: 'medium',
+    type: 'rss',
   },
 ];
 
