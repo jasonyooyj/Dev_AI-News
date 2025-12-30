@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import {
   getNewsItemsByUserId,
   createNewsItem,
   createNewsItems,
   deleteAllNewsItems,
+  DEFAULT_USER_ID,
+  getOrCreateDefaultUser,
 } from '@/lib/db/queries';
 import { z } from 'zod';
 
@@ -28,22 +29,16 @@ const newsItemSchema = z.object({
 });
 
 export async function GET() {
-  const session = await auth();
+  // Ensure default user exists
+  await getOrCreateDefaultUser();
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const newsItems = await getNewsItemsByUserId(session.user.id);
+  const newsItems = await getNewsItemsByUserId(DEFAULT_USER_ID);
   return NextResponse.json(newsItems);
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  // Ensure default user exists
+  await getOrCreateDefaultUser();
 
   try {
     const body = await request.json();
@@ -52,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (Array.isArray(body)) {
       const items = body.map((item) => ({
         ...newsItemSchema.parse(item),
-        userId: session.user.id,
+        userId: DEFAULT_USER_ID,
         publishedAt: item.publishedAt ? new Date(item.publishedAt) : undefined,
         translatedAt: item.translatedAt ? new Date(item.translatedAt) : undefined,
       }));
@@ -65,7 +60,7 @@ export async function POST(request: NextRequest) {
     const data = newsItemSchema.parse(body);
     const newsItem = await createNewsItem({
       ...data,
-      userId: session.user.id,
+      userId: DEFAULT_USER_ID,
       publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
       translatedAt: data.translatedAt ? new Date(data.translatedAt) : undefined,
     });
@@ -81,12 +76,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  await deleteAllNewsItems(session.user.id);
+  await deleteAllNewsItems(DEFAULT_USER_ID);
   return NextResponse.json({ success: true });
 }

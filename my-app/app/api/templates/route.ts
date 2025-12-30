@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { getStyleTemplatesByUserId, createStyleTemplate } from '@/lib/db/queries';
+import {
+  getStyleTemplatesByUserId,
+  createStyleTemplate,
+  DEFAULT_USER_ID,
+  getOrCreateDefaultUser,
+} from '@/lib/db/queries';
 import { z } from 'zod';
 
 const templateSchema = z.object({
@@ -13,22 +17,14 @@ const templateSchema = z.object({
 });
 
 export async function GET() {
-  const session = await auth();
+  await getOrCreateDefaultUser();
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const templates = await getStyleTemplatesByUserId(session.user.id);
+  const templates = await getStyleTemplatesByUserId(DEFAULT_USER_ID);
   return NextResponse.json(templates);
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  await getOrCreateDefaultUser();
 
   try {
     const body = await request.json();
@@ -36,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const template = await createStyleTemplate({
       ...data,
-      userId: session.user.id,
+      userId: DEFAULT_USER_ID,
     });
 
     return NextResponse.json(template, { status: 201 });

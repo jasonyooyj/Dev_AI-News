@@ -18,7 +18,34 @@ import {
   type User,
 } from './schema';
 
+// Default user ID for public access (no authentication required)
+export const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
+
 // ============ User Queries ============
+
+export async function getOrCreateDefaultUser(): Promise<User> {
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, DEFAULT_USER_ID))
+    .limit(1);
+
+  if (existing) return existing;
+
+  // Create default user
+  const [created] = await db
+    .insert(users)
+    .values({
+      id: DEFAULT_USER_ID,
+      email: 'default@ainews.local',
+      displayName: 'Default User',
+      theme: 'system',
+      autoSummarize: true,
+    })
+    .returning();
+
+  return created;
+}
 
 export async function getUserById(userId: string): Promise<User | null> {
   const [user] = await db

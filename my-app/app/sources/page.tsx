@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SourceList } from '@/components/sources/SourceList';
 import { SourceForm } from '@/components/sources/SourceForm';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useSources } from '@/hooks/useSources';
 import { useSourcesStore } from '@/store';
 import { Source } from '@/types/news';
@@ -106,20 +105,17 @@ function SourcesPageContent() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
-        <MainLayout sources={sources}>
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </MainLayout>
-      </ProtectedRoute>
+      <MainLayout sources={sources}>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <ProtectedRoute>
-      <MainLayout sources={sources}>
-        <div className="space-y-6">
+    <MainLayout sources={sources}>
+      <div className="space-y-6">
           {/* Duplicate Warning */}
           {duplicateCount > 0 && (
             <div className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
@@ -158,9 +154,8 @@ function SourcesPageContent() {
             onSubmit={handleSubmit}
             source={editingSource}
           />
-        </div>
-      </MainLayout>
-    </ProtectedRoute>
+      </div>
+    </MainLayout>
   );
 }
 

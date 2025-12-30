@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { getSourcesByUserId, createSource } from '@/lib/db/queries';
+import {
+  getSourcesByUserId,
+  createSource,
+  DEFAULT_USER_ID,
+  getOrCreateDefaultUser,
+} from '@/lib/db/queries';
 import { z } from 'zod';
 
 const sourceSchema = z.object({
@@ -22,22 +26,14 @@ const sourceSchema = z.object({
 });
 
 export async function GET() {
-  const session = await auth();
+  await getOrCreateDefaultUser();
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const sources = await getSourcesByUserId(session.user.id);
+  const sources = await getSourcesByUserId(DEFAULT_USER_ID);
   return NextResponse.json(sources);
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  await getOrCreateDefaultUser();
 
   try {
     const body = await request.json();
@@ -45,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     const source = await createSource({
       ...data,
-      userId: session.user.id,
+      userId: DEFAULT_USER_ID,
     });
 
     return NextResponse.json(source, { status: 201 });

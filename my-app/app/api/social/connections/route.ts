@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { getSocialConnectionsByUserId, upsertSocialConnection, deleteSocialConnection } from '@/lib/db/queries';
+import {
+  getSocialConnectionsByUserId,
+  upsertSocialConnection,
+  DEFAULT_USER_ID,
+  getOrCreateDefaultUser,
+} from '@/lib/db/queries';
 import { z } from 'zod';
 
 const connectionSchema = z.object({
@@ -19,22 +23,14 @@ const connectionSchema = z.object({
 });
 
 export async function GET() {
-  const session = await auth();
+  await getOrCreateDefaultUser();
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const connections = await getSocialConnectionsByUserId(session.user.id);
+  const connections = await getSocialConnectionsByUserId(DEFAULT_USER_ID);
   return NextResponse.json(connections);
 }
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  await getOrCreateDefaultUser();
 
   try {
     const body = await request.json();
@@ -42,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const connection = await upsertSocialConnection({
       ...data,
-      userId: session.user.id,
+      userId: DEFAULT_USER_ID,
     });
 
     return NextResponse.json(connection, { status: 201 });
