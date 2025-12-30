@@ -79,6 +79,12 @@ export function useNews() {
     async (newsItem: NewsItem) => {
       if (newsItem.quickSummary) return newsItem;
 
+      // Skip temp items
+      if (newsItem.id.startsWith('temp_')) {
+        console.warn('Skipping summary for temp item:', newsItem.id);
+        return null;
+      }
+
       console.log(`[Summary] Starting for: ${newsItem.title}`);
 
       try {
@@ -142,7 +148,8 @@ export function useNews() {
   // Generate summaries for multiple items (parallel with batching)
   const generateSummariesForItems = useCallback(
     async (items: NewsItem[]) => {
-      const itemsToSummarize = items.filter(item => !item.quickSummary);
+      // Filter out temp items
+      const itemsToSummarize = items.filter(item => !item.quickSummary && !item.id.startsWith('temp_'));
       console.log(`[Summary] Processing ${itemsToSummarize.length} items in parallel batches`);
 
       // Process in batches of 3 for better speed while avoiding rate limits
@@ -176,11 +183,11 @@ export function useNews() {
 
         // If auto summarize, run summaries for new items (with delay to avoid rate limiting)
         if (autoSummarize) {
-          // Wait a bit for store to update
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Wait a bit for store to update and temp IDs to be replaced
+          await new Promise(resolve => setTimeout(resolve, 1500));
 
           const items = useNewsStore.getState().newsItems.filter(
-            (n) => n.sourceId === source.id && !n.quickSummary
+            (n) => n.sourceId === source.id && !n.quickSummary && !n.id.startsWith('temp_')
           );
 
           // Don't await - run in background
@@ -204,7 +211,7 @@ export function useNews() {
         if (autoSummarize) {
           const items = useNewsStore.getState().newsItems;
           const newItem = items.find((n) => n.url === url);
-          if (newItem && !newItem.quickSummary) {
+          if (newItem && !newItem.quickSummary && !newItem.id.startsWith('temp_')) {
             generateSummary(newItem);
           }
         }

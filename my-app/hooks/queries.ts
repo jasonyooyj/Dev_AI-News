@@ -102,8 +102,6 @@ export function useAnalyzeStyle() {
 
 // ============ Source Fetch Mutations (RSS + Scraping) ============
 export function useFetchRss() {
-  const addNewsItem = useNewsStore((s) => s.addNewsItem);
-  const newsItems = useNewsStore((s) => s.newsItems);
   const updateSource = useSourcesStore((s) => s.updateSource);
 
   return useMutation({
@@ -184,13 +182,17 @@ export function useFetchRss() {
         throw err;
       }
     },
-    onSuccess: ({ source, items }) => {
-      let addedCount = 0;
-      const existingUrls = new Set(newsItems.map((n) => n.url));
+    onSuccess: async ({ source, items }) => {
+      // Get fresh state from store to avoid duplicates
+      const currentNewsItems = useNewsStore.getState().newsItems;
+      const addNewsItem = useNewsStore.getState().addNewsItem;
 
-      items.forEach((item) => {
+      let addedCount = 0;
+      const existingUrls = new Set(currentNewsItems.map((n) => n.url));
+
+      for (const item of items) {
         if (!existingUrls.has(item.link)) {
-          addNewsItem({
+          await addNewsItem({
             sourceId: source.id,
             title: item.title,
             originalContent: item.content || '',
@@ -198,9 +200,10 @@ export function useFetchRss() {
             publishedAt: item.pubDate || new Date().toISOString(),
             isProcessed: false,
           });
+          existingUrls.add(item.link); // Prevent duplicates within same batch
           addedCount++;
         }
-      });
+      }
 
       // Update lastFetchedAt for the source
       updateSource(source.id, { lastFetchedAt: new Date().toISOString() });

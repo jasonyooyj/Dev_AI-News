@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [summarizingIds, setSummarizingIds] = useState<string[]>([]);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [generatedContents, setGeneratedContents] = useState<Partial<Record<Platform, PlatformContent>>>({});
+  const [isRefreshingSources, setIsRefreshingSources] = useState(false);
 
   const activeSources = sources.filter((s) => s.isActive);
 
@@ -175,6 +176,16 @@ export default function DashboardPage() {
     return results;
   }, [activeSources, handleFetchSource]);
 
+  // Handler for sidebar "Fetch All Sources" button
+  const handleRefreshSources = useCallback(async () => {
+    setIsRefreshingSources(true);
+    try {
+      await handleFetchAll();
+    } finally {
+      setIsRefreshingSources(false);
+    }
+  }, [handleFetchAll]);
+
   // UrlScraper handlers
   const handleScrape = useCallback(async (url: string): Promise<ScrapeResult> => {
     try {
@@ -227,7 +238,11 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <MainLayout sources={sources}>
+      <MainLayout
+        sources={sources}
+        onRefreshSources={handleRefreshSources}
+        isRefreshing={isRefreshingSources}
+      >
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

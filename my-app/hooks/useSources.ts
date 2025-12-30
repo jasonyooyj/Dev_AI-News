@@ -1,30 +1,23 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useSourcesStore } from '@/store';
 import { Source } from '@/types/news';
 
 /**
- * useSources - Migrated to use Zustand store
+ * useSources - Migrated to use Zustand store with API backend
  *
- * State is auto-persisted to localStorage via Zustand persist middleware
+ * Data is fetched from the API by useDataInit hook
+ * initDefaults is called by fetchSources when no sources exist
  */
 export function useSources() {
   // Zustand store state and actions
   const sources = useSourcesStore((s) => s.sources);
+  const isLoading = useSourcesStore((s) => s.isLoading);
   const addSourceToStore = useSourcesStore((s) => s.addSource);
   const updateSourceInStore = useSourcesStore((s) => s.updateSource);
   const deleteSourceFromStore = useSourcesStore((s) => s.deleteSource);
-  const initDefaults = useSourcesStore((s) => s.initDefaults);
-
-  // Initialize default sources on mount if empty
-  useEffect(() => {
-    initDefaults();
-  }, [initDefaults]);
-
-  // Loading state - Zustand hydrates synchronously
-  const isLoading = false;
 
   // Add source
   const addSource = useCallback(

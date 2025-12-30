@@ -122,6 +122,12 @@ export const useNewsStore = create<NewsState>((set, get) => ({
   },
 
   updateNewsItem: async (id, updates) => {
+    // Skip API call for temp items (not yet saved to DB)
+    if (id.startsWith('temp_')) {
+      console.warn('Skipping update for temp item:', id);
+      return;
+    }
+
     const { newsItems } = get();
 
     // Optimistic update
@@ -145,6 +151,14 @@ export const useNewsStore = create<NewsState>((set, get) => ({
   },
 
   deleteNewsItem: async (id) => {
+    // Skip API call for temp items (not yet saved to DB)
+    if (id.startsWith('temp_')) {
+      set((state) => ({
+        newsItems: state.newsItems.filter((item) => item.id !== id),
+      }));
+      return;
+    }
+
     const { newsItems } = get();
 
     // Optimistic update
