@@ -293,6 +293,7 @@ export function StyleEditor({
   const templatesByPlatform = useMemo(() => {
     const grouped: Record<Platform, StyleTemplate[]> = {
       twitter: [],
+      bluesky: [],
       threads: [],
       instagram: [],
       linkedin: [],
@@ -308,6 +309,7 @@ export function StyleEditor({
     const counts: Record<Platform | 'all', number> = {
       all: templates.length,
       twitter: 0,
+      bluesky: 0,
       threads: 0,
       instagram: 0,
       linkedin: 0,

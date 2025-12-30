@@ -2,7 +2,7 @@
 
 > CEO 관점의 제품 분석을 바탕으로 작성된 우선순위별 개선 로드맵
 >
-> 최종 업데이트: 2024-12-29
+> 최종 업데이트: 2025-12-30
 
 ---
 
@@ -10,11 +10,12 @@
 
 | 항목 | 상태 |
 |------|------|
-| 버전 | 0.4.0 |
-| 단계 | MVP 완료 |
+| 버전 | 0.5.0 |
+| 단계 | MVP 완료 + 소셜 연동 완료 |
 | 수익화 | ❌ 없음 |
-| 타겟 유저 | 불명확 |
-| 경쟁력 | 기술적 기반만 존재 |
+| 소셜 연동 | ✅ Bluesky, ✅ Threads, ✅ LinkedIn, ✅ Instagram |
+| 타겟 유저 | AI 뉴스 큐레이터/인플루언서 |
+| 경쟁력 | 뉴스 → SNS 자동화 파이프라인 |
 
 ---
 
@@ -24,42 +25,81 @@
 
 **목표**: 생성된 콘텐츠를 원클릭으로 실제 플랫폼에 게시
 
+#### 💰 API 비용 분석 (2025년 12월 기준)
+
+| 플랫폼 | 비용 | Rate Limit | 권장 |
+|--------|------|------------|------|
+| **Twitter/X** | $100+/월 (15K tweets) | 제한적 | ❌ 제외 |
+| **Bluesky** | **무료** | 제한 없음 | ✅ 1순위 |
+| **Threads** | **무료** | 250 posts/day | ✅ 2순위 |
+| **LinkedIn** | **무료** (기본) | ~100 req/day | ✅ 3순위 |
+| **Instagram** | **무료** (Business) | 25 posts/day | ✅ 4순위 |
+
+> **전략**: Twitter/X는 API 비용이 너무 높아 제외하고, 무료 대안인 Bluesky를 1순위로 추가.
+> Bluesky는 28M+ 사용자, 완전 무료 API, 등록 불필요로 최적의 선택.
+
 #### TODO:
 
-- [ ] **Twitter/X API 연동**
-  - [ ] Twitter Developer Portal 앱 등록
-  - [ ] OAuth 2.0 PKCE 인증 플로우 구현
-  - [ ] `lib/social/twitter.ts` 생성 - API 클라이언트
-  - [ ] 트윗 게시 API 구현 (`POST /api/social/twitter/post`)
-  - [ ] 사용자별 Twitter 계정 연결 UI (`/settings/connections`)
-  - [ ] 연결된 계정 토큰 안전하게 저장 (Firestore + 암호화)
-  - [ ] 트윗 게시 결과 저장 (tweet ID, URL)
-  - [ ] Rate limit 핸들링 및 에러 처리
+- [x] **Bluesky API 연동** ⭐ 1순위 (완전 무료) ✅ 완료
+  - [x] AT Protocol 이해 및 SDK 설치 (`@atproto/api`)
+  - [x] App Password 기반 인증 구현 (OAuth 불필요)
+  - [x] `lib/social/bluesky.ts` 생성 - API 클라이언트
+  - [x] 포스트 게시 API 구현 (`POST /api/social/bluesky/post`)
+  - [x] 사용자별 Bluesky 계정 연결 UI (`/settings/connections`)
+  - [x] App Password 안전하게 저장 (Firestore + 암호화)
+  - [x] 게시 결과 저장 (post URI, URL)
+  - [x] 리치 텍스트 (멘션, 링크, 해시태그) 지원
+  - [x] 참고: https://docs.bsky.app/
 
-- [ ] **LinkedIn API 연동**
-  - [ ] LinkedIn Developer 앱 등록
-  - [ ] OAuth 2.0 인증 플로우 구현
-  - [ ] `lib/social/linkedin.ts` 생성
-  - [ ] 포스트 게시 API 구현 (`POST /api/social/linkedin/post`)
-  - [ ] 회사 페이지 vs 개인 프로필 선택 옵션
-  - [ ] 이미지 첨부 기능 (OpenGraph 이미지 자동 추출)
+- [x] **Threads API 연동** ⭐ 2순위 (완전 무료) ✅ 완료
+  - [x] Meta Developer 앱 등록
+  - [x] Threads API 액세스 활성화 (2024년 6월 전체 공개됨)
+  - [x] OAuth 2.0 인증 플로우 구현
+  - [x] `lib/social/threads.ts` 생성
+  - [x] 포스트 게시 API 구현 (`POST /api/social/threads/post`)
+  - [x] 미디어 컨테이너 생성 및 게시 2단계 프로세스
+  - [x] 텍스트 게시 지원 (이미지/비디오는 추후 확장 가능)
+  - [x] 참고: 275M+ 사용자, 2025년 7월 대규모 API 업데이트
 
-- [ ] **Threads API 연동** (Meta)
-  - [ ] Threads API 베타 액세스 신청
-  - [ ] Instagram Business 계정 연동 플로우
-  - [ ] 게시 API 구현
+- [x] **LinkedIn API 연동** ⭐ 3순위 (무료 기본 기능) ✅ 완료
+  - [x] LinkedIn Developer 앱 등록
+  - [x] OAuth 2.0 인증 플로우 구현
+  - [x] `lib/social/linkedin.ts` 생성
+  - [x] 포스트 게시 API 구현 (`POST /api/social/linkedin/post`)
+  - [x] 개인 프로필 게시 (회사 페이지는 Community Management API 필요)
+  - [x] 링크 첨부 기능 (Article content)
+  - [x] 참고: 토큰 60일 유효, 3,000자 제한
 
-- [ ] **Instagram API 연동**
-  - [ ] Facebook Developer 앱 설정
-  - [ ] Instagram Graph API 연동
-  - [ ] 비즈니스/크리에이터 계정 전용 (개인 계정 제한)
-  - [ ] 이미지 필수 → AI 이미지 생성 또는 템플릿 제공
+- [x] **Instagram Graph API 연동** ⭐ 4순위 (무료, Business 계정) ✅ 완료
+  - [x] Instagram Business Login 연동 (Graph API)
+  - [x] OAuth 2.0 인증 플로우 구현
+  - [x] `lib/social/instagram.ts` 생성
+  - [x] 포스트 게시 API 구현 (`POST /api/social/instagram/post`)
+  - [x] 2단계 컨테이너 프로세스 (create container → publish)
+  - [x] 비즈니스/크리에이터 계정 전용 (개인 계정 미지원)
+  - [x] 이미지 필수 → 게시 시 이미지 URL 입력 필요
+  - [x] Rate limit: 25 posts/day, 200 req/hour
+  - [x] 참고: 60일 토큰 유효, 2,200자 캡션 제한
 
-- [ ] **통합 게시 UI**
-  - [ ] `components/social/PublishButton.tsx` - 플랫폼별 게시 버튼
-  - [ ] `components/social/PublishModal.tsx` - 게시 확인 모달
-  - [ ] 게시 상태 표시 (pending, published, failed)
-  - [ ] 게시 이력 저장 (`users/{userId}/publishHistory`)
+- [x] ~~**Twitter/X API 연동**~~ ❌ 비용 문제로 제외
+  - 기본 API: $100/월 (15,000 tweets)
+  - Pro API: $5,000/월 (1M tweets)
+  - Enterprise: $42,000+/월
+  - 대안: Bluesky로 대체 (유사 기능, 무료)
+
+- [x] **통합 게시 UI** ✅ 완료 (Bluesky, Threads, LinkedIn, Instagram)
+  - [x] `components/social/BlueskyPublishButton.tsx` - Bluesky 게시 버튼
+  - [x] `components/social/BlueskyConnectModal.tsx` - Bluesky 연결 모달
+  - [x] `components/social/ThreadsPublishButton.tsx` - Threads 게시 버튼
+  - [x] `components/social/ThreadsConnectModal.tsx` - Threads 연결 모달
+  - [x] `components/social/LinkedInPublishButton.tsx` - LinkedIn 게시 버튼
+  - [x] `components/social/LinkedInConnectModal.tsx` - LinkedIn 연결 모달
+  - [x] `components/social/InstagramPublishButton.tsx` - Instagram 게시 버튼
+  - [x] `components/social/InstagramConnectModal.tsx` - Instagram 연결 모달
+  - [x] `components/social/SocialConnectionCard.tsx` - 연결 상태 표시
+  - [x] 게시 상태 표시 (pending, published, failed)
+  - [x] 게시 이력 저장 (`users/{userId}/publishHistory`)
+  - [ ] 멀티 플랫폼 동시 게시 옵션
 
 ---
 
@@ -155,8 +195,10 @@
 #### TODO:
 
 - [ ] **게시 성과 추적**
-  - [ ] Twitter Analytics API 연동 (좋아요, RT, 조회수)
-  - [ ] LinkedIn Analytics 연동 (조회수, 반응, 댓글)
+  - [ ] Bluesky 성과 추적 (좋아요, 리포스트, 조회수) - 무료 API
+  - [ ] Threads Insights API 연동 (조회수, 좋아요, 답글) - 무료
+  - [ ] LinkedIn Analytics 연동 (조회수, 반응, 댓글) - 무료
+  - [ ] Instagram Insights 연동 (Business 계정) - 무료
   - [ ] `users/{userId}/analytics` 컬렉션
   - [ ] 일별/주별/월별 집계
 
@@ -218,10 +260,11 @@
 
 #### TODO:
 
-- [ ] **Twitter/X 통합**
-  - [ ] 특정 계정 트윗 수집 (예: @sama, @ylecun)
+- [ ] **Bluesky 통합** (무료 API)
+  - [ ] 특정 계정 포스트 수집 (예: AI 연구자, 기업 계정)
   - [ ] AI 관련 해시태그 모니터링
   - [ ] 트렌딩 토픽 감지
+  - [ ] AT Protocol 기반 피드 구독
 
 - [ ] **Reddit 통합**
   - [ ] r/MachineLearning, r/artificial 등 구독
@@ -309,7 +352,7 @@
   - [ ] 플랫폼별 이미지 크기 최적화
 
 - [ ] **스레드/연재 생성**
-  - [ ] 긴 콘텐츠 → 트위터 스레드 자동 분할
+  - [ ] 긴 콘텐츠 → Bluesky/Threads 스레드 자동 분할
   - [ ] 연재물 계획 (Part 1, 2, 3...)
   - [ ] 연결 문구 자동 생성
 
@@ -343,8 +386,8 @@
 
 | Phase | 기간 | 목표 | 주요 기능 |
 |-------|------|------|----------|
-| **Phase 1** | - | PMF 검증 | Twitter 연동, Freemium, 스케줄링 |
-| **Phase 2** | - | 성장 | 전체 소셜 연동, 분석, 소스 확장 |
+| **Phase 1** | - | PMF 검증 | ✅ Bluesky+Threads+LinkedIn+Instagram 연동, Freemium, 스케줄링 |
+| **Phase 2** | - | 성장 | 분석 대시보드, 콘텐츠 스케줄링, 소스 확장 |
 | **Phase 3** | - | 확장 | 팀 기능, 모바일, 고급 AI |
 | **Phase 4** | - | 최적화 | 성능, UX 개선, 엔터프라이즈 |
 

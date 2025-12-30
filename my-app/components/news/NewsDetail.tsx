@@ -21,6 +21,9 @@ import { Card } from '@/components/ui/Card';
 import { useNewsStore } from '@/store';
 import { PlatformPreview } from '@/components/social/PlatformPreview';
 import { FeedbackButtons } from '@/components/social/FeedbackButtons';
+import { BlueskyPublishButton, BlueskyConnectModal, ThreadsPublishButton, ThreadsConnectModal, LinkedInPublishButton, LinkedInConnectModal, InstagramPublishButton, InstagramConnectModal } from '@/components/social';
+import { useSocialConnections } from '@/hooks/useSocialConnections';
+import type { PublishResult } from '@/types/news';
 import {
   NewsItem,
   Source,
@@ -71,8 +74,17 @@ function LinkedInIcon({ className, style }: IconProps) {
   );
 }
 
+function BlueskyIcon({ className, style }: IconProps) {
+  return (
+    <svg className={className} style={style} viewBox="0 0 568 501" fill="currentColor" aria-hidden="true">
+      <path d="M123.121 33.6637C188.241 82.5526 258.281 181.681 284 234.873C309.719 181.681 379.759 82.5526 444.879 33.6637C491.866 -1.61183 568 -28.9064 568 57.9464C568 75.2916 558.055 203.659 552.222 224.501C531.947 296.954 458.067 315.434 392.347 304.249C507.222 323.8 536.444 388.56 473.333 453.32C353.473 576.312 301.061 422.461 287.631 383.039C285.169 375.012 284.017 372.431 284 375.306C283.983 372.431 282.831 375.012 280.369 383.039C266.939 422.461 214.527 576.312 94.6667 453.32C31.5556 388.56 60.7778 323.8 175.653 304.249C109.933 315.434 36.0535 296.954 15.7778 224.501C9.94525 203.659 0 75.2916 0 57.9464C0 -28.9064 76.1345 -1.61183 123.121 33.6637Z" />
+    </svg>
+  );
+}
+
 const PlatformIcons: Record<Platform, React.ComponentType<IconProps>> = {
   twitter: TwitterIcon,
+  bluesky: BlueskyIcon,
   threads: ThreadsIcon,
   instagram: InstagramIcon,
   linkedin: LinkedInIcon,
@@ -469,6 +481,16 @@ function GenerateContentTabContent({
   generatedContent,
   onThumbsUp,
   onRegenerateWithFeedback,
+  blueskyConnection,
+  threadsConnection,
+  linkedinConnection,
+  instagramConnection,
+  onBlueskyConnectClick,
+  onThreadsConnectClick,
+  onLinkedInConnectClick,
+  onInstagramConnectClick,
+  onPublishSuccess,
+  newsUrl,
 }: {
   platforms: Platform[];
   selectedPlatform: Platform;
@@ -481,6 +503,16 @@ function GenerateContentTabContent({
   generatedContent?: PlatformContent;
   onThumbsUp: () => void;
   onRegenerateWithFeedback: (feedback: string) => void;
+  blueskyConnection: import('@/types/news').SocialConnection | null;
+  threadsConnection: import('@/types/news').SocialConnection | null;
+  linkedinConnection: import('@/types/news').SocialConnection | null;
+  instagramConnection: import('@/types/news').SocialConnection | null;
+  onBlueskyConnectClick: () => void;
+  onThreadsConnectClick: () => void;
+  onLinkedInConnectClick: () => void;
+  onInstagramConnectClick: () => void;
+  onPublishSuccess: (platform: 'bluesky' | 'threads' | 'linkedin' | 'instagram', postUrl: string) => void;
+  newsUrl?: string;
 }) {
   return (
     <div className="space-y-6">
@@ -576,6 +608,50 @@ function GenerateContentTabContent({
             }}
             isRegenerating={isGenerating}
           />
+
+          {/* Publish Buttons - Show for supported platforms */}
+          {(selectedPlatform === 'bluesky' || selectedPlatform === 'threads' || selectedPlatform === 'linkedin' || selectedPlatform === 'instagram') && (
+            <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
+              <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                Publish to {selectedPlatform === 'bluesky' ? 'Bluesky' : selectedPlatform === 'threads' ? 'Threads' : selectedPlatform === 'linkedin' ? 'LinkedIn' : 'Instagram'}
+              </h4>
+              {selectedPlatform === 'bluesky' && (
+                <BlueskyPublishButton
+                  content={generatedContent.content}
+                  connection={blueskyConnection}
+                  linkUrl={newsUrl}
+                  onSuccess={(url) => onPublishSuccess('bluesky', url)}
+                  onConnectClick={onBlueskyConnectClick}
+                />
+              )}
+              {selectedPlatform === 'threads' && (
+                <ThreadsPublishButton
+                  content={generatedContent.content}
+                  connection={threadsConnection}
+                  onSuccess={(url) => onPublishSuccess('threads', url)}
+                  onConnectClick={onThreadsConnectClick}
+                />
+              )}
+              {selectedPlatform === 'linkedin' && (
+                <LinkedInPublishButton
+                  content={generatedContent.content}
+                  connection={linkedinConnection}
+                  linkUrl={newsUrl}
+                  onSuccess={(url) => onPublishSuccess('linkedin', url)}
+                  onConnectClick={onLinkedInConnectClick}
+                />
+              )}
+              {selectedPlatform === 'instagram' && (
+                <InstagramPublishButton
+                  content={generatedContent.content}
+                  connection={instagramConnection}
+                  onConnect={onInstagramConnectClick}
+                  onReconnect={onInstagramConnectClick}
+                  onPublished={(url) => onPublishSuccess('instagram', url)}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -597,6 +673,17 @@ export function NewsDetail({
   const [activeTab, setActiveTab] = useState<TabType>('summary');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('twitter');
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Partial<Record<Platform, string>>>({});
+  const [isBlueskyModalOpen, setIsBlueskyModalOpen] = useState(false);
+  const [isThreadsModalOpen, setIsThreadsModalOpen] = useState(false);
+  const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
+  const [isInstagramModalOpen, setIsInstagramModalOpen] = useState(false);
+
+  // Social connections hook
+  const { getConnection, connectBluesky, connectThreads, connectLinkedIn, connectInstagram, savePublishResult } = useSocialConnections();
+  const blueskyConnection = getConnection('bluesky');
+  const threadsConnection = getConnection('threads');
+  const linkedinConnection = getConnection('linkedin');
+  const instagramConnection = getConnection('instagram');
 
   // Get save function from store
   const saveTranslation = useNewsStore((s) => s.saveTranslation);
@@ -641,7 +728,87 @@ export function NewsDetail({
     window.open(news.url, '_blank', 'noopener,noreferrer');
   };
 
+  const handleBlueskyConnect = async (profile: {
+    did: string;
+    handle: string;
+    displayName?: string;
+    avatar?: string;
+    credentials: {
+      identifier: string;
+      appPassword: string;
+    };
+  }) => {
+    await connectBluesky({
+      handle: profile.handle,
+      credentials: profile.credentials,
+    });
+  };
+
+  const handleThreadsConnect = async (data: {
+    id: string;
+    username: string;
+    name?: string;
+    profilePictureUrl?: string;
+    credentials: {
+      accessToken: string;
+      userId: string;
+      expiresAt: string;
+    };
+  }) => {
+    await connectThreads({
+      username: data.username,
+      credentials: data.credentials,
+    });
+  };
+
+  const handleLinkedInConnect = async (data: {
+    sub: string;
+    name: string;
+    email: string;
+    picture?: string;
+    credentials: {
+      accessToken: string;
+      personUrn: string;
+      expiresAt: string;
+      refreshToken?: string;
+    };
+  }) => {
+    await connectLinkedIn({
+      name: data.name,
+      credentials: data.credentials,
+    });
+  };
+
+  const handleInstagramConnect = async (data: {
+    id: string;
+    username: string;
+    name?: string;
+    profilePictureUrl?: string;
+    credentials: {
+      accessToken: string;
+      userId: string;
+      expiresAt: string;
+    };
+  }) => {
+    await connectInstagram({
+      username: data.username,
+      credentials: data.credentials,
+    });
+  };
+
+  const handlePublishSuccess = async (platform: 'bluesky' | 'threads' | 'linkedin' | 'instagram', postUrl: string) => {
+    // Save publish result to history
+    const publishResult: PublishResult = {
+      platform,
+      success: true,
+      postUrl,
+      publishedAt: new Date().toISOString(),
+    };
+    await savePublishResult(news.id, generatedContents[selectedPlatform]?.content || '', [publishResult]);
+  };
+
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -723,6 +890,16 @@ export function NewsDetail({
             generatedContent={generatedContents[selectedPlatform]}
             onThumbsUp={handleThumbsUp}
             onRegenerateWithFeedback={handleRegenerateWithFeedback}
+            blueskyConnection={blueskyConnection}
+            threadsConnection={threadsConnection}
+            linkedinConnection={linkedinConnection}
+            instagramConnection={instagramConnection}
+            onBlueskyConnectClick={() => setIsBlueskyModalOpen(true)}
+            onThreadsConnectClick={() => setIsThreadsModalOpen(true)}
+            onLinkedInConnectClick={() => setIsLinkedInModalOpen(true)}
+            onInstagramConnectClick={() => setIsInstagramModalOpen(true)}
+            onPublishSuccess={handlePublishSuccess}
+            newsUrl={news.url}
           />
         )}
       </div>
@@ -751,6 +928,35 @@ export function NewsDetail({
         </Button>
       </ModalFooter>
     </Modal>
+
+    {/* Bluesky Connect Modal */}
+    <BlueskyConnectModal
+      isOpen={isBlueskyModalOpen}
+      onClose={() => setIsBlueskyModalOpen(false)}
+      onSuccess={handleBlueskyConnect}
+    />
+
+    {/* Threads Connect Modal */}
+    <ThreadsConnectModal
+      isOpen={isThreadsModalOpen}
+      onClose={() => setIsThreadsModalOpen(false)}
+      onSuccess={handleThreadsConnect}
+    />
+
+    {/* LinkedIn Connect Modal */}
+    <LinkedInConnectModal
+      isOpen={isLinkedInModalOpen}
+      onClose={() => setIsLinkedInModalOpen(false)}
+      onSuccess={handleLinkedInConnect}
+    />
+
+    {/* Instagram Connect Modal */}
+    <InstagramConnectModal
+      isOpen={isInstagramModalOpen}
+      onClose={() => setIsInstagramModalOpen(false)}
+      onSuccess={handleInstagramConnect}
+    />
+  </>
   );
 }
 

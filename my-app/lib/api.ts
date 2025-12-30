@@ -1,4 +1,4 @@
-import { Platform, StyleTemplate } from '@/types/news';
+import { Platform, StyleTemplate, SocialPlatform } from '@/types/news';
 
 // API Response types
 interface SummarizeResponse {
@@ -55,6 +55,139 @@ interface ScrapeConfig {
   linkSelector: string;
   descriptionSelector?: string;
   dateSelector?: string;
+}
+
+// Social Media API types
+interface BlueskyConnectResponse {
+  success: boolean;
+  profile: {
+    did: string;
+    handle: string;
+    displayName?: string;
+    avatar?: string;
+  };
+}
+
+interface BlueskyPostResponse {
+  success: boolean;
+  post: {
+    uri: string;
+    cid: string;
+    postUrl: string;
+  };
+}
+
+interface SocialPostRequest {
+  identifier: string;
+  appPassword: string;
+  text: string;
+  linkUrl?: string;
+}
+
+// Threads API types
+interface ThreadsCallbackResponse {
+  success: boolean;
+  profile: {
+    id: string;
+    username: string;
+    name?: string;
+    profilePictureUrl?: string;
+  };
+  credentials: {
+    accessToken: string;
+    userId: string;
+    expiresAt: string;
+  };
+}
+
+interface ThreadsPostRequest {
+  accessToken: string;
+  userId: string;
+  text: string;
+  imageUrl?: string;
+}
+
+interface ThreadsPostResponse {
+  success: boolean;
+  post: {
+    id: string;
+    postUrl: string;
+  };
+}
+
+// LinkedIn API types
+interface LinkedInCallbackResponse {
+  success: boolean;
+  profile: {
+    sub: string;
+    name: string;
+    email: string;
+    picture?: string;
+    givenName: string;
+    familyName: string;
+  };
+  credentials: {
+    accessToken: string;
+    personUrn: string;
+    expiresAt: string;
+    refreshToken?: string;
+  };
+}
+
+interface LinkedInPostRequest {
+  accessToken: string;
+  personUrn: string;
+  text: string;
+  articleUrl?: string;
+  articleTitle?: string;
+  articleDescription?: string;
+  visibility?: 'PUBLIC' | 'CONNECTIONS';
+}
+
+interface LinkedInPostResponse {
+  success: boolean;
+  post: {
+    id: string;
+    postUrl: string;
+  };
+}
+
+// Instagram API types
+interface InstagramCallbackResponse {
+  success: boolean;
+  profile: {
+    id: string;
+    username: string;
+    name?: string;
+    profilePictureUrl?: string;
+    accountType?: 'BUSINESS' | 'CREATOR' | 'MEDIA_CREATOR';
+  };
+  credentials: {
+    accessToken: string;
+    userId: string;
+    expiresAt: string;
+  };
+}
+
+interface InstagramPostRequest {
+  accessToken: string;
+  userId: string;
+  imageUrl: string; // Required - Instagram doesn't support text-only posts
+  caption: string;
+  locationId?: string;
+  userTags?: Array<{
+    username: string;
+    x: number;
+    y: number;
+  }>;
+}
+
+interface InstagramPostResponse {
+  success: boolean;
+  post: {
+    id: string;
+    postUrl: string;
+  };
 }
 
 // Error handling
@@ -193,6 +326,100 @@ export const api = {
       return handleResponse<ScrapeSourceResponse>(response);
     },
   },
+
+  // Social Media
+  social: {
+    bluesky: {
+      // Verify credentials and get profile
+      connect: async (
+        identifier: string,
+        appPassword: string
+      ): Promise<BlueskyConnectResponse> => {
+        const response = await fetch('/api/social/bluesky/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, appPassword }),
+        });
+        return handleResponse<BlueskyConnectResponse>(response);
+      },
+
+      // Create a post
+      post: async (request: SocialPostRequest): Promise<BlueskyPostResponse> => {
+        const response = await fetch('/api/social/bluesky/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(request),
+        });
+        return handleResponse<BlueskyPostResponse>(response);
+      },
+    },
+
+    threads: {
+      // Exchange OAuth code for tokens
+      callback: async (code: string): Promise<ThreadsCallbackResponse> => {
+        const response = await fetch('/api/social/threads/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        return handleResponse<ThreadsCallbackResponse>(response);
+      },
+
+      // Create a post
+      post: async (request: ThreadsPostRequest): Promise<ThreadsPostResponse> => {
+        const response = await fetch('/api/social/threads/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(request),
+        });
+        return handleResponse<ThreadsPostResponse>(response);
+      },
+    },
+
+    linkedin: {
+      // Exchange OAuth code for tokens
+      callback: async (code: string): Promise<LinkedInCallbackResponse> => {
+        const response = await fetch('/api/social/linkedin/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        return handleResponse<LinkedInCallbackResponse>(response);
+      },
+
+      // Create a post
+      post: async (request: LinkedInPostRequest): Promise<LinkedInPostResponse> => {
+        const response = await fetch('/api/social/linkedin/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(request),
+        });
+        return handleResponse<LinkedInPostResponse>(response);
+      },
+    },
+
+    instagram: {
+      // Exchange OAuth code for tokens
+      callback: async (code: string): Promise<InstagramCallbackResponse> => {
+        const response = await fetch('/api/social/instagram/callback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        return handleResponse<InstagramCallbackResponse>(response);
+      },
+
+      // Create a post (requires image)
+      post: async (request: InstagramPostRequest): Promise<InstagramPostResponse> => {
+        const response = await fetch('/api/social/instagram/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(request),
+        });
+        return handleResponse<InstagramPostResponse>(response);
+      },
+    },
+  },
 };
 
 export { ApiError };
@@ -206,4 +433,16 @@ export type {
   ScrapedArticle,
   ScrapeSourceResponse,
   ScrapeConfig,
+  BlueskyConnectResponse,
+  BlueskyPostResponse,
+  SocialPostRequest,
+  ThreadsCallbackResponse,
+  ThreadsPostRequest,
+  ThreadsPostResponse,
+  LinkedInCallbackResponse,
+  LinkedInPostRequest,
+  LinkedInPostResponse,
+  InstagramCallbackResponse,
+  InstagramPostRequest,
+  InstagramPostResponse,
 };

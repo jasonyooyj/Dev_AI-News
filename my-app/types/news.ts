@@ -75,7 +75,45 @@ export interface ProcessedNews {
   createdAt: string;
 }
 
-export type Platform = 'twitter' | 'threads' | 'instagram' | 'linkedin';
+export type Platform = 'twitter' | 'threads' | 'instagram' | 'linkedin' | 'bluesky';
+
+// Social Media Connection Types
+export type SocialPlatform = 'bluesky' | 'threads' | 'linkedin' | 'instagram';
+
+export interface SocialConnection {
+  id: string;
+  platform: SocialPlatform;
+  handle: string;           // @username or display name
+  isConnected: boolean;
+  connectedAt: string;
+  // Platform-specific data (encrypted in Firestore)
+  credentials?: {
+    // Bluesky: identifier + app password
+    identifier?: string;
+    appPassword?: string;
+    // OAuth platforms: access token + refresh token
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: string;
+  };
+}
+
+export interface PublishResult {
+  platform: SocialPlatform;
+  success: boolean;
+  postId?: string;
+  postUrl?: string;
+  error?: string;
+  publishedAt: string;
+}
+
+export interface PublishHistory {
+  id: string;
+  newsItemId: string;
+  content: string;
+  results: PublishResult[];
+  createdAt: string;
+}
 
 export interface PlatformConfig {
   name: string;
@@ -98,6 +136,12 @@ export const PLATFORM_CONFIGS: Record<Platform, PlatformConfig> = {
     icon: 'X',
     maxLength: 280,
     color: '#000000',
+  },
+  bluesky: {
+    name: 'Bluesky',
+    icon: 'Bluesky',
+    maxLength: 300,
+    color: '#0085FF',
   },
   threads: {
     name: 'Threads',

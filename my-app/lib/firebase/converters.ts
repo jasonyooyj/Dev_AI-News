@@ -5,7 +5,7 @@ import {
   SnapshotOptions,
   FirestoreDataConverter,
 } from 'firebase/firestore';
-import type { NewsItem, Source, StyleTemplate, QuickSummary } from '@/types/news';
+import type { NewsItem, Source, StyleTemplate, QuickSummary, SocialConnection, PublishHistory } from '@/types/news';
 
 // Helper to convert Firestore Timestamp to ISO string
 export function timestampToISOString(timestamp: Timestamp | null | undefined): string | undefined {
@@ -227,6 +227,125 @@ export const styleTemplateConverter: FirestoreDataConverter<StyleTemplate> = {
       isDefault: data.isDefault,
       createdAt: timestampToISOString(data.createdAt) ?? new Date().toISOString(),
       updatedAt: timestampToISOString(data.updatedAt) ?? new Date().toISOString(),
+    };
+  },
+};
+
+// SocialConnection Firestore Data type
+interface SocialConnectionFirestore {
+  platform: string;
+  handle: string;
+  isConnected: boolean;
+  connectedAt: Timestamp;
+  credentials?: {
+    identifier?: string;
+    appPassword?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: Timestamp | null;
+  };
+}
+
+// SocialConnection converter
+export const socialConnectionConverter: FirestoreDataConverter<SocialConnection> = {
+  toFirestore(connection: SocialConnection): DocumentData {
+    const data: DocumentData = {
+      platform: connection.platform,
+      handle: connection.handle,
+      isConnected: connection.isConnected,
+      connectedAt: isoStringToTimestamp(connection.connectedAt) ?? Timestamp.now(),
+    };
+
+    if (connection.credentials) {
+      data.credentials = {
+        ...connection.credentials,
+      };
+      if (connection.credentials.expiresAt) {
+        data.credentials.expiresAt = isoStringToTimestamp(connection.credentials.expiresAt);
+      }
+    }
+
+    return data;
+  },
+
+  fromFirestore(
+    snapshot: QueryDocumentSnapshot<SocialConnectionFirestore>,
+    options?: SnapshotOptions
+  ): SocialConnection {
+    const data = snapshot.data(options);
+
+    const connection: SocialConnection = {
+      id: snapshot.id,
+      platform: data.platform as SocialConnection['platform'],
+      handle: data.handle,
+      isConnected: data.isConnected,
+      connectedAt: timestampToISOString(data.connectedAt) ?? new Date().toISOString(),
+    };
+
+    if (data.credentials) {
+      connection.credentials = {
+        identifier: data.credentials.identifier,
+        appPassword: data.credentials.appPassword,
+        accessToken: data.credentials.accessToken,
+        refreshToken: data.credentials.refreshToken,
+        expiresAt: data.credentials.expiresAt
+          ? timestampToISOString(data.credentials.expiresAt)
+          : undefined,
+      };
+    }
+
+    return connection;
+  },
+};
+
+// PublishHistory Firestore Data type
+interface PublishHistoryFirestore {
+  newsItemId: string;
+  content: string;
+  results: Array<{
+    platform: string;
+    success: boolean;
+    postId?: string;
+    postUrl?: string;
+    error?: string;
+    publishedAt: Timestamp;
+  }>;
+  createdAt: Timestamp;
+}
+
+// PublishHistory converter
+export const publishHistoryConverter: FirestoreDataConverter<PublishHistory> = {
+  toFirestore(history: PublishHistory): DocumentData {
+    return {
+      newsItemId: history.newsItemId,
+      content: history.content,
+      results: history.results.map((result) => ({
+        ...result,
+        publishedAt: isoStringToTimestamp(result.publishedAt) ?? Timestamp.now(),
+      })),
+      createdAt: isoStringToTimestamp(history.createdAt) ?? Timestamp.now(),
+    };
+  },
+
+  fromFirestore(
+    snapshot: QueryDocumentSnapshot<PublishHistoryFirestore>,
+    options?: SnapshotOptions
+  ): PublishHistory {
+    const data = snapshot.data(options);
+
+    return {
+      id: snapshot.id,
+      newsItemId: data.newsItemId,
+      content: data.content,
+      results: data.results.map((result) => ({
+        platform: result.platform as PublishHistory['results'][0]['platform'],
+        success: result.success,
+        postId: result.postId,
+        postUrl: result.postUrl,
+        error: result.error,
+        publishedAt: timestampToISOString(result.publishedAt) ?? new Date().toISOString(),
+      })),
+      createdAt: timestampToISOString(data.createdAt) ?? new Date().toISOString(),
     };
   },
 };

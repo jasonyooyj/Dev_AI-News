@@ -22,15 +22,19 @@ import {
   newsItemConverter,
   sourceConverter,
   styleTemplateConverter,
+  socialConnectionConverter,
+  publishHistoryConverter,
   isoStringToTimestamp,
 } from './converters';
-import type { NewsItem, Source, StyleTemplate, QuickSummary } from '@/types/news';
+import type { NewsItem, Source, StyleTemplate, QuickSummary, SocialConnection, PublishHistory, SocialPlatform } from '@/types/news';
 
 // Collection paths
 export const getCollectionPath = {
   sources: (userId: string) => `users/${userId}/sources`,
   newsItems: (userId: string) => `users/${userId}/newsItems`,
   styleTemplates: (userId: string) => `users/${userId}/styleTemplates`,
+  socialConnections: (userId: string) => `users/${userId}/socialConnections`,
+  publishHistory: (userId: string) => `users/${userId}/publishHistory`,
 };
 
 // ==================== NEWS ITEMS ====================
@@ -445,4 +449,155 @@ export async function batchAddStyleTemplates(
 
   await batch.commit();
   return ids;
+}
+
+// ==================== SOCIAL CONNECTIONS ====================
+
+export async function getSocialConnections(userId: string): Promise<SocialConnection[]> {
+  const db = getFirebaseDb();
+  const colRef = collection(db, getCollectionPath.socialConnections(userId)).withConverter(
+    socialConnectionConverter
+  );
+  const q = query(colRef, orderBy('connectedAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => doc.data());
+}
+
+export async function getSocialConnectionByPlatform(
+  userId: string,
+  platform: SocialPlatform
+): Promise<SocialConnection | null> {
+  const db = getFirebaseDb();
+  const colRef = collection(db, getCollectionPath.socialConnections(userId)).withConverter(
+    socialConnectionConverter
+  );
+  const q = query(colRef, where('platform', '==', platform), limit(1));
+  const snapshot = await getDocs(q);
+  return snapshot.empty ? null : snapshot.docs[0].data();
+}
+
+export async function addSocialConnection(
+  userId: string,
+  connection: Omit<SocialConnection, 'id' | 'connectedAt'>
+): Promise<string> {
+  const db = getFirebaseDb();
+
+  // Check if connection already exists for this platform
+  const existing = await getSocialConnectionByPlatform(userId, connection.platform);
+  if (existing) {
+    // Update existing connection
+    await updateSocialConnection(userId, existing.id, {
+      ...connection,
+      connectedAt: new Date().toISOString(),
+    });
+    return existing.id;
+  }
+
+  // Create new connection
+  const colRef = collection(db, getCollectionPath.socialConnections(userId));
+  const docRef = await addDoc(colRef, {
+    ...connection,
+    connectedAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function updateSocialConnection(
+  userId: string,
+  connectionId: string,
+  updates: Partial<SocialConnection>
+): Promise<void> {
+  const db = getFirebaseDb();
+  const docRef = doc(db, getCollectionPath.socialConnections(userId), connectionId);
+
+  const firestoreUpdates: Record<string, unknown> = { ...updates };
+  delete firestoreUpdates.id;
+
+  if (updates.connectedAt) {
+    firestoreUpdates.connectedAt = isoStringToTimestamp(updates.connectedAt);
+  }
+
+  await updateDoc(docRef, firestoreUpdates);
+}
+
+export async function deleteSocialConnection(userId: string, connectionId: string): Promise<void> {
+  const db = getFirebaseDb();
+  const docRef = doc(db, getCollectionPath.socialConnections(userId), connectionId);
+  await deleteDoc(docRef);
+}
+
+export async function disconnectSocialPlatform(
+  userId: string,
+  platform: SocialPlatform
+): Promise<void> {
+  const connection = await getSocialConnectionByPlatform(userId, platform);
+  if (connection) {
+    await deleteSocialConnection(userId, connection.id);
+  }
+}
+
+export function subscribeToSocialConnections(
+  userId: string,
+  callback: (connections: SocialConnection[]) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const db = getFirebaseDb();
+  const colRef = collection(db, getCollectionPath.socialConnections(userId)).withConverter(
+    socialConnectionConverter
+  );
+  const q = query(colRef, orderBy('connectedAt', 'desc'));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const connections = snapshot.docs.map((doc) => doc.data());
+      callback(connections);
+    },
+    (error) => {
+      console.error('Error subscribing to social connections:', error);
+      onError?.(error);
+    }
+  );
+}
+
+// ==================== PUBLISH HISTORY ====================
+
+export async function getPublishHistory(userId: string): Promise<PublishHistory[]> {
+  const db = getFirebaseDb();
+  const colRef = collection(db, getCollectionPath.publishHistory(userId)).withConverter(
+    publishHistoryConverter
+  );
+  const q = query(colRef, orderBy('createdAt', 'desc'), limit(100));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => doc.data());
+}
+
+export async function addPublishHistory(
+  userId: string,
+  history: Omit<PublishHistory, 'id' | 'createdAt'>
+): Promise<string> {
+  const db = getFirebaseDb();
+  const colRef = collection(db, getCollectionPath.publishHistory(userId));
+  const docRef = await addDoc(colRef, {
+    ...history,
+    results: history.results.map((r) => ({
+      ...r,
+      publishedAt: isoStringToTimestamp(r.publishedAt) ?? serverTimestamp(),
+    })),
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getPublishHistoryByNewsItem(
+  userId: string,
+  newsItemId: string
+): Promise<PublishHistory[]> {
+  const db = getFirebaseDb();
+  const colRef = collection(db, getCollectionPath.publishHistory(userId)).withConverter(
+    publishHistoryConverter
+  );
+  const q = query(colRef, where('newsItemId', '==', newsItemId), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => doc.data());
 }

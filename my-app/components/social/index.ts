@@ -1,2 +1,12 @@
 export { CopyButton } from './CopyButton';
 export { PlatformPreview } from './PlatformPreview';
+export { FeedbackButtons } from './FeedbackButtons';
+export { BlueskyConnectModal } from './BlueskyConnectModal';
+export { BlueskyPublishButton } from './BlueskyPublishButton';
+export { ThreadsConnectModal } from './ThreadsConnectModal';
+export { ThreadsPublishButton } from './ThreadsPublishButton';
+export { LinkedInConnectModal } from './LinkedInConnectModal';
+export { LinkedInPublishButton } from './LinkedInPublishButton';
+export { InstagramConnectModal } from './InstagramConnectModal';
+export { InstagramPublishButton } from './InstagramPublishButton';
+export { SocialConnectionCard } from './SocialConnectionCard';
