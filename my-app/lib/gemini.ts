@@ -77,13 +77,22 @@ export async function summarizeNews(
 ): Promise<SummarizeResult> {
   const ai = getGeminiClient();
 
-  const systemPrompt = `당신은 AI/테크 분야의 전문 콘텐츠 라이터입니다. 뉴스를 읽고 독자들이 "이게 왜 중요하지?"라는 질문에 답할 수 있도록 핵심을 정리합니다.
+  const systemPrompt = `당신은 AI/ML/LLM 분야 전문 테크 콘텐츠 라이터입니다. AI 관련 뉴스를 읽고 독자들이 "이게 왜 중요하지?"라는 질문에 답할 수 있도록 핵심을 정리합니다.
 
-당신의 글쓰기 스타일:
+## 콘텍스트
+- 이 뉴스는 AI, 머신러닝, LLM, 생성형 AI 관련 소식입니다
+- 독자는 AI/테크에 관심있는 한국어 사용자입니다
+
+## 글쓰기 스타일
 - 무엇이 공개/발표되었는지 명확하게 설명
 - 기존과 무엇이 달라지는지 비교
 - 업계/사용자에게 미치는 실질적 임팩트 분석
 - 전문 용어는 쉽게 풀어서 설명
+
+## 중요: 고유명사 처리
+- 회사명, 제품명, 모델명, 인명은 **원문 그대로 유지** (번역 금지)
+- 예시: OpenAI, Claude, GPT-4, Gemini, Meta, Google, Anthropic, Llama, Mistral, Sam Altman 등
+- 기술 용어도 원문 유지: API, GPU, TPU, transformer, fine-tuning, RAG, embedding 등
 
 반드시 유효한 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.`;
 
@@ -363,7 +372,11 @@ export async function translateContent(
     };
   }
 
-  const systemPrompt = `당신은 전문 번역가입니다. 원문을 한국어로 **충실하게 직역**합니다.
+  const systemPrompt = `당신은 AI/테크 분야 전문 번역가입니다. 원문을 한국어로 **충실하게 직역**합니다.
+
+## 콘텍스트
+- 이 기사는 AI, 머신러닝, LLM, 생성형 AI 관련 테크 뉴스입니다
+- 독자는 AI/테크에 관심있는 한국어 사용자입니다
 
 ## 핵심 원칙
 - **절대 요약하지 않습니다** - 원문의 모든 내용을 빠짐없이 번역
@@ -371,10 +384,11 @@ export async function translateContent(
 - **추가/삭제 금지** - 원문에 없는 내용 추가 금지, 원문 내용 생략 금지
 - **끝까지 번역** - 중간에 멈추지 말고 원문 전체를 완전히 번역
 
-## 번역 스타일
-- 기술 용어는 영어 유지 (API, GPU, LLM, AI, ML 등)
-- 자연스러운 한국어 문장으로 번역하되 의미 변형 금지
-- 고유명사(회사명, 제품명, 인명)는 원문 유지
+## 중요: 고유명사 처리 (번역 금지)
+- **회사명**: OpenAI, Anthropic, Google, Meta, Microsoft, NVIDIA, xAI, Mistral AI, Cohere, Hugging Face 등
+- **제품/모델명**: GPT-4, Claude, Gemini, Llama, Mistral, Grok, DALL-E, Midjourney, Stable Diffusion 등
+- **인명**: Sam Altman, Dario Amodei, Demis Hassabis, Yann LeCun, Andrej Karpathy 등
+- **기술 용어**: API, GPU, TPU, transformer, fine-tuning, RAG, embedding, inference, token, context window, RLHF, LoRA 등
 
 ## 출력 포맷 (Markdown)
 - 섹션 제목은 ## 또는 ### 헤딩 사용
