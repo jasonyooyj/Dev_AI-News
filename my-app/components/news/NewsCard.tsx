@@ -119,8 +119,11 @@ export const NewsCard = memo(function NewsCard({
           </div>
         </div>
 
-        {/* Title */}
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 mb-3 leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        {/* Title - 클릭 시 상세 보기 */}
+        <h3
+          onClick={() => onView?.(news)}
+          className="text-base font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 mb-3 leading-snug hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+        >
           {news.title}
         </h3>
 
