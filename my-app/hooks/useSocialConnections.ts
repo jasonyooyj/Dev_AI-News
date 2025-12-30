@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuthContext } from '@/components/auth/AuthProvider';
 import type { SocialConnection, SocialPlatform, PublishResult } from '@/types/news';
 import { toast } from 'sonner';
 
@@ -52,14 +52,14 @@ interface UseSocialConnectionsReturn {
 }
 
 export function useSocialConnections(): UseSocialConnectionsReturn {
-  const { data: session } = useSession();
+  const { user } = useAuthContext();
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   // Fetch connections on mount
   const fetchConnections = useCallback(async () => {
-    if (!session?.user) {
+    if (!user) {
       setConnections([]);
       setIsLoading(false);
       return;
@@ -78,7 +78,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user]);
+  }, [user]);
 
   useEffect(() => {
     fetchConnections();
@@ -121,7 +121,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         appPassword: string;
       };
     }) => {
-      if (!session?.user) {
+      if (!user) {
         throw new Error('User not authenticated');
       }
 
@@ -143,7 +143,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [session?.user]
+    [user]
   );
 
   // Connect Threads account
@@ -156,7 +156,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         expiresAt: string;
       };
     }) => {
-      if (!session?.user) {
+      if (!user) {
         throw new Error('User not authenticated');
       }
 
@@ -179,7 +179,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [session?.user]
+    [user]
   );
 
   // Connect LinkedIn account
@@ -193,7 +193,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         refreshToken?: string;
       };
     }) => {
-      if (!session?.user) {
+      if (!user) {
         throw new Error('User not authenticated');
       }
 
@@ -217,7 +217,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [session?.user]
+    [user]
   );
 
   // Connect Instagram account
@@ -230,7 +230,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         expiresAt: string;
       };
     }) => {
-      if (!session?.user) {
+      if (!user) {
         throw new Error('User not authenticated');
       }
 
@@ -253,13 +253,13 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [session?.user]
+    [user]
   );
 
   // Disconnect a platform
   const disconnect = useCallback(
     async (platform: SocialPlatform) => {
-      if (!session?.user) {
+      if (!user) {
         throw new Error('User not authenticated');
       }
 
@@ -281,13 +281,13 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         throw err;
       }
     },
-    [session?.user, connections, fetchConnections]
+    [user, connections, fetchConnections]
   );
 
   // Save publish result to history
   const savePublishResult = useCallback(
     async (newsItemId: string, content: string, results: PublishResult[]) => {
-      if (!session?.user) {
+      if (!user) {
         throw new Error('User not authenticated');
       }
 
@@ -302,7 +302,7 @@ export function useSocialConnections(): UseSocialConnectionsReturn {
         // Don't throw - this is non-critical
       }
     },
-    [session?.user]
+    [user]
   );
 
   return {
