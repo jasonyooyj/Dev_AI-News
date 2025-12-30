@@ -142,12 +142,12 @@
   - [x] Support keyboard navigation
 
 #### API Tests - `e2e/api.spec.ts`
-- [x] GET /api/openai - Provider Status (3 tests)
+- [x] GET /api/ai - Provider Status (3 tests)
   - [x] Return provider status
   - [x] Indicate available providers
   - [x] Return supported models
 
-- [x] POST /api/openai - Content Generation (7 tests)
+- [x] POST /api/ai - Content Generation (7 tests)
   - [x] Accept summarize mode
   - [x] Require title and content
   - [x] Accept generate mode
@@ -156,7 +156,7 @@
   - [x] Handle analyze-style mode
   - [x] Handle regenerate mode
 
-- [x] POST /api/openai - Error Handling (3 tests)
+- [x] POST /api/ai - Error Handling (3 tests)
   - [x] Return 400 for invalid mode
   - [x] Return error when no API key
   - [x] Return error for missing parameters

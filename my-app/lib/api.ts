@@ -222,7 +222,7 @@ export const api = {
       title: string,
       content: string
     ): Promise<SummarizeResponse> => {
-      const response = await fetch('/api/openai', {
+      const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'summarize', title, content }),
@@ -239,7 +239,7 @@ export const api = {
         styleTemplate?: Pick<StyleTemplate, 'tone' | 'characteristics' | 'examples'>;
       }
     ): Promise<GenerateResponse> => {
-      const response = await fetch('/api/openai', {
+      const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -254,7 +254,7 @@ export const api = {
     },
 
     analyzeStyle: async (examples: string[]): Promise<AnalyzeStyleResponse> => {
-      const response = await fetch('/api/openai', {
+      const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'analyze-style', examples }),
@@ -267,7 +267,7 @@ export const api = {
       feedback: string,
       platform: Platform
     ): Promise<GenerateResponse> => {
-      const response = await fetch('/api/openai', {
+      const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -284,7 +284,7 @@ export const api = {
       title: string,
       content: string
     ): Promise<{ title: string; content: string; isTranslated: boolean }> => {
-      const response = await fetch('/api/openai', {
+      const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'translate', title, content }),

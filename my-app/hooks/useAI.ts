@@ -6,14 +6,13 @@ import { useNewsStore } from '@/store';
 import { useSummarize, useGenerateContent, useRegenerateContent } from './queries';
 
 /**
- * useOpenAI - Migrated to use TanStack Query mutations
+ * useAI - AI content generation using Gemini via TanStack Query mutations
  *
  * All API calls now go through TanStack Query with:
  * - Automatic error handling with toast notifications
  * - Loading state management
- * - Provider selection from Zustand store
  */
-export function useOpenAI() {
+export function useAI() {
   // TanStack Query mutations
   const summarizeMutation = useSummarize();
   const generateMutation = useGenerateContent();

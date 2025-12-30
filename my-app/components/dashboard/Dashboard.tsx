@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useSources } from '@/hooks/useSources';
 import { useNews } from '@/hooks/useNews';
-import { useOpenAI } from '@/hooks/useOpenAI';
+import { useAI } from '@/hooks/useAI';
 import { useStyleTemplates } from '@/hooks/useStyleTemplates';
 import { NewsItem, Source, Platform, PlatformContent } from '@/types/news';
 
@@ -32,7 +32,7 @@ interface ScrapeResult {
 export function Dashboard() {
   const { sources, isLoading: sourcesLoading } = useSources();
   const { newsItems, isLoading: newsLoading, fetchFromRss, deleteNewsItem, toggleBookmark, refreshNews, addNewsItem } = useNews();
-  const { generatePlatformContent, regenerateWithFeedback } = useOpenAI();
+  const { generatePlatformContent, regenerateWithFeedback } = useAI();
   const { templates: styleTemplates } = useStyleTemplates();
 
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);

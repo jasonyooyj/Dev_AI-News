@@ -90,8 +90,8 @@ Organized under `e2e/pages/`:
 - Accessibility features
 
 **API Endpoint Tests** (`api.spec.ts`) - 18 tests
-- GET /api/openai - Provider status
-- POST /api/openai - Content generation modes
+- GET /api/ai - Provider status
+- POST /api/ai - Content generation modes
   - Summarize mode
   - Generate mode (multiple platforms)
   - Analyze-style mode
@@ -252,8 +252,8 @@ npm run test:e2e:debug
 - [x] OpenAI provider usage
 - [x] DeepSeek provider usage
 - [x] Provider selection and switching
-- [x] API: GET /api/openai (status)
-- [x] API: POST /api/openai (generate, summarize, etc.)
+- [x] API: GET /api/ai (status)
+- [x] API: POST /api/ai (generate, summarize, etc.)
 - [x] API: POST /api/rss (feed fetching)
 - [x] API: POST /api/scrape (web scraping)
 - [x] Error handling and recovery

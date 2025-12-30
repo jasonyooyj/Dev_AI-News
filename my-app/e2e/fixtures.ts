@@ -230,7 +230,7 @@ export const test = base.extend<{
    */
   authenticatedPage: async ({ page, context }, use) => {
     // Mock AI APIs to avoid real API calls
-    await page.route('**/api/openai', async (route) => {
+    await page.route('**/api/ai', async (route) => {
       await handleMockAPIResponse(route);
     });
 
@@ -278,7 +278,7 @@ export const test = base.extend<{
    */
   mockAPIs: [async ({ page }, use) => {
     // Mock AI API (DeepSeek)
-    await page.route('**/api/openai', async (route) => {
+    await page.route('**/api/ai', async (route) => {
       await handleMockAPIResponse(route);
     });
 

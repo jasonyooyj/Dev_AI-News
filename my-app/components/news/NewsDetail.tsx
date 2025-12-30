@@ -348,7 +348,7 @@ function FullArticleTabContent({
       // Step 2: Translate and format
       setLoadingStep('translating');
 
-      const translateResponse = await fetch('/api/openai', {
+      const translateResponse = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

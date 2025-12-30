@@ -175,8 +175,8 @@ C:\Users\basqu\Documents\GitHub\Dev_AI-News\my-app\
 - Error handling
 
 ### API Endpoints
-- GET /api/openai (provider status)
-- POST /api/openai (all modes: summarize, generate, analyze, regenerate)
+- GET /api/ai (provider status)
+- POST /api/ai (all modes: summarize, generate, analyze, regenerate)
 - POST /api/rss (RSS feed fetching)
 - POST /api/scrape (web scraping)
 

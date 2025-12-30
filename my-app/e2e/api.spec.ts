@@ -4,12 +4,12 @@ import { test, expect } from './fixtures';
  * API Route Tests - All calls are automatically mocked
  */
 test.describe('API Routes', () => {
-  test.describe('POST /api/openai - Content Generation', () => {
+  test.describe('POST /api/ai - Content Generation', () => {
     test('should handle summarize mode', async ({ page }) => {
       await page.goto('/');
 
       const data = await page.evaluate(async () => {
-        const response = await fetch('/api/openai', {
+        const response = await fetch('/api/ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -29,7 +29,7 @@ test.describe('API Routes', () => {
       await page.goto('/');
 
       const data = await page.evaluate(async () => {
-        const response = await fetch('/api/openai', {
+        const response = await fetch('/api/ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -50,7 +50,7 @@ test.describe('API Routes', () => {
       await page.goto('/');
 
       const data = await page.evaluate(async () => {
-        const response = await fetch('/api/openai', {
+        const response = await fetch('/api/ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -69,7 +69,7 @@ test.describe('API Routes', () => {
       await page.goto('/');
 
       const data = await page.evaluate(async () => {
-        const response = await fetch('/api/openai', {
+        const response = await fetch('/api/ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -90,7 +90,7 @@ test.describe('API Routes', () => {
       await page.goto('/');
 
       const result = await page.evaluate(async () => {
-        const response = await fetch('/api/openai', {
+        const response = await fetch('/api/ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mode: 'invalid' }),

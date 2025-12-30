@@ -53,8 +53,8 @@ e2e/
 **File**: `e2e/news-detail.spec.ts`
 
 #### API Endpoint Tests (18 tests)
-- `GET /api/openai` - Provider status and models
-- `POST /api/openai` - Multiple modes:
+- `GET /api/ai` - Provider status and models
+- `POST /api/ai` - Multiple modes:
   - Summarize: Extract key points and categorize
   - Generate: Create platform-specific content
   - Analyze-style: Extract writing characteristics
@@ -182,11 +182,11 @@ npm run test:e2e:webkit      # Safari only
 - [x] Error handling
 
 ### API Endpoints
-- [x] GET /api/openai - Provider status
-- [x] POST /api/openai - Summarize mode
-- [x] POST /api/openai - Generate mode
-- [x] POST /api/openai - Analyze-style mode
-- [x] POST /api/openai - Regenerate mode
+- [x] GET /api/ai - Provider status
+- [x] POST /api/ai - Summarize mode
+- [x] POST /api/ai - Generate mode
+- [x] POST /api/ai - Analyze-style mode
+- [x] POST /api/ai - Regenerate mode
 - [x] POST /api/rss - RSS feed fetching
 - [x] POST /api/scrape - Web scraping
 - [x] Error handling
@@ -285,7 +285,7 @@ Running 100 tests using 1 worker
 ✓ Home Page > should display stats cards
 ✓ Home Page > should have News Feed and Collect News tabs
 ✓ News Detail > should open modal when clicking View Details
-✓ API Routes > GET /api/openai - Provider Status
+✓ API Routes > GET /api/ai - Provider Status
 ✓ AI Provider > should detect available AI providers
 ✓ User Workflows > user should view and explore news items
 
