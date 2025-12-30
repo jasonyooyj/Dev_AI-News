@@ -2,7 +2,7 @@
 
 > AI 뉴스 수집 → AI 요약 → 소셜 미디어 콘텐츠 자동 생성 웹 대시보드
 
-![Version](https://img.shields.io/badge/version-0.8.1-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.9.0-blue?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
@@ -49,7 +49,7 @@
 - **Next.js API Routes** - 서버리스 API
 - **Neon PostgreSQL** - 서버리스 데이터베이스
 - **Drizzle ORM** - 타입 안전 ORM
-- **DeepSeek API** - AI 요약/생성 (deepseek-reasoner)
+- **Gemini AI** - AI 요약/생성 (gemini-3-flash)
 
 ## 빠른 시작
 
@@ -63,7 +63,8 @@ npm install
 
 # 3. 환경 변수 설정 (.env.local)
 DATABASE_URL=postgresql://...          # Neon PostgreSQL
-DEEPSEEK_API_KEY=sk-...               # DeepSeek API
+GEMINI_API_KEY=...                    # Google Gemini API
+BROWSERLESS_TOKEN=...                 # Browserless.io (선택)
 
 # 4. 데이터베이스 설정
 npm run db:push
@@ -121,6 +122,7 @@ my-app/
 
 ## 버전 히스토리
 
+- **v0.9.0** - Gemini AI 전환, YouTube/Twitter/Threads 스크래핑, 우선순위 시스템
 - **v0.8.1** - README 문서 전면 개편 및 Firebase 설정 파일 정리
 - **v0.8.0** - 인증 제거, 공개 접근 모델
 - **v0.7.1** - 버그 수정 (뉴스 중복, 임시 ID 오류)

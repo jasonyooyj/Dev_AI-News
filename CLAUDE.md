@@ -13,9 +13,9 @@ npm run test:e2e            # E2E 테스트
 ## Project Context
 
 - **What**: AI 뉴스 수집 → AI 요약 → 소셜 미디어 콘텐츠 생성 대시보드
-- **Version**: 0.8.0
+- **Version**: 0.9.0
 - **Auth**: 없음 (공개 접근, DEFAULT_USER_ID 사용)
-- **Stack**: Next.js 15 + Neon PostgreSQL + DeepSeek AI
+- **Stack**: Next.js 15 + Neon PostgreSQL + Gemini AI
 
 ## Key Files
 
