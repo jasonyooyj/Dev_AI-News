@@ -57,6 +57,27 @@ interface ScrapeConfig {
   dateSelector?: string;
 }
 
+// Threads Profile API types
+interface ThreadsPost {
+  postUrl: string;
+  content: string;
+  author: string;
+  authorName: string;
+  timestamp: string | null;
+  mediaUrls: string[];
+  likes: number | null;
+  replies: number | null;
+}
+
+interface ThreadsProfileResponse {
+  username: string;
+  displayName: string;
+  bio: string | null;
+  profilePicture: string | null;
+  posts: ThreadsPost[];
+  postsCount: number;
+}
+
 // Social Media API types
 interface BlueskyConnectResponse {
   success: boolean;
@@ -325,6 +346,16 @@ export const api = {
       });
       return handleResponse<ScrapeSourceResponse>(response);
     },
+
+    // Scrape Threads profile feed
+    fetchThreadsProfile: async (url: string, limit?: number): Promise<ThreadsProfileResponse> => {
+      const response = await fetch('/api/scrape/threads/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, limit: limit || 10 }),
+      });
+      return handleResponse<ThreadsProfileResponse>(response);
+    },
   },
 
   // Social Media
@@ -433,6 +464,8 @@ export type {
   ScrapedArticle,
   ScrapeSourceResponse,
   ScrapeConfig,
+  ThreadsPost,
+  ThreadsProfileResponse,
   BlueskyConnectResponse,
   BlueskyPostResponse,
   SocialPostRequest,

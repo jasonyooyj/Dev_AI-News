@@ -106,7 +106,30 @@ export function useFetchRss() {
 
   return useMutation({
     mutationFn: async ({ source }: { source: Source }) => {
-      console.log(`[Fetch] Starting fetch for: ${source.name}`);
+      console.log(`[Fetch] Starting fetch for: ${source.name} (type: ${source.type})`);
+
+      // Handle Threads profile sources
+      if (source.type === 'threads') {
+        console.log(`[Fetch] Using Threads profile scraping: ${source.websiteUrl}`);
+        try {
+          const result = await api.scrape.fetchThreadsProfile(source.websiteUrl, 10);
+          console.log(`[Fetch] Got ${result.postsCount} posts from Threads profile`);
+
+          return {
+            source,
+            items: result.posts.map(post => ({
+              title: `${result.displayName}: ${post.content.substring(0, 80)}${post.content.length > 80 ? '...' : ''}`,
+              link: post.postUrl,
+              content: post.content,
+              pubDate: post.timestamp || new Date().toISOString(),
+              mediaUrls: post.mediaUrls,
+            }))
+          };
+        } catch (err) {
+          console.error(`[Fetch] Threads profile scrape failed:`, err);
+          throw err;
+        }
+      }
 
       // If source has RSS, use RSS feed
       if (source.rssUrl) {
@@ -200,7 +223,7 @@ export function useFetchRss() {
             publishedAt: item.pubDate || new Date().toISOString(),
             isProcessed: false,
             priority: source.priority || 'medium',
-            mediaUrls: [],
+            mediaUrls: (item as { mediaUrls?: string[] }).mediaUrls || [],
           });
           existingUrls.add(item.link); // Prevent duplicates within same batch
           addedCount++;
@@ -210,7 +233,7 @@ export function useFetchRss() {
       // Update lastFetchedAt for the source
       updateSource(source.id, { lastFetchedAt: new Date().toISOString() });
 
-      const method = source.rssUrl ? 'RSS' : 'scraping';
+      const method = source.type === 'threads' ? 'Threads' : (source.rssUrl ? 'RSS' : 'scraping');
       toast.success(`Fetched ${addedCount} new articles from ${source.name} (${method})`);
     },
     onError: (error: ApiError) => {

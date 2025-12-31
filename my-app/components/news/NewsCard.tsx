@@ -85,7 +85,7 @@ export const NewsCard = memo(function NewsCard({
     <Card
       variant="default"
       padding="none"
-      className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden relative h-full flex flex-col"
+      className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden relative flex flex-col"
     >
       {/* Priority Badge - 카드 좌상단 */}
       {priority !== 'medium' && (
@@ -122,13 +122,13 @@ export const NewsCard = memo(function NewsCard({
         {/* Title - 클릭 시 상세 보기 */}
         <h3
           onClick={() => onView?.(news)}
-          className="text-base font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 mb-3 leading-snug hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+          className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-3 leading-relaxed hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
         >
           {news.title}
         </h3>
 
         {/* Summary Content */}
-        <div className="min-h-[72px] mb-4 flex-1">
+        <div className="mb-4">
           {isSummarizing ? (
             <SummaryLoading />
           ) : hasQuickSummary && news.quickSummary ? (

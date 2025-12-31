@@ -279,7 +279,7 @@ export function NewsList({
         <div
           className={
             viewMode === 'grid'
-              ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'
+              ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start'
               : 'flex flex-col gap-3'
           }
         >
