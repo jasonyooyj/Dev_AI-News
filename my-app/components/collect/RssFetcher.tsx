@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Rss, RefreshCw, CheckCircle2, AlertCircle, Database } from 'lucide-react';
+import { Rss, RefreshCw, CheckCircle2, AlertCircle, Database, Youtube } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -32,7 +32,10 @@ export function RssFetcher({
   const [results, setResults] = useState<FetchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
 
-  const rssSources = sources.filter((s) => s.rssUrl && s.isActive);
+  // Include sources with rssUrl OR supported types (youtube, threads)
+  const fetchableSources = sources.filter((s) =>
+    s.isActive && (s.rssUrl || s.type === 'youtube' || s.type === 'threads')
+  );
 
   const handleFetchAll = async () => {
     if (!onFetchAll) return;
@@ -86,9 +89,9 @@ export function RssFetcher({
             <Rss className="w-5 h-5" />
           </div>
           <div>
-            <CardTitle>RSS Feed Fetcher</CardTitle>
+            <CardTitle>Source Fetcher</CardTitle>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-              {rssSources.length} active RSS sources
+              {fetchableSources.length} active sources
             </p>
           </div>
         </div>
@@ -96,7 +99,7 @@ export function RssFetcher({
           variant="primary"
           onClick={handleFetchAll}
           isLoading={isFetching}
-          disabled={rssSources.length === 0 || isFetching}
+          disabled={fetchableSources.length === 0 || isFetching}
           leftIcon={!isFetching && <RefreshCw className="w-4 h-4" />}
         >
           Fetch All
@@ -104,17 +107,17 @@ export function RssFetcher({
       </CardHeader>
 
       <CardContent className="p-3 sm:p-4">
-        {rssSources.length === 0 ? (
+        {fetchableSources.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
             <div className="p-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
               <Database className="w-6 h-6 text-zinc-400" />
             </div>
             <div>
               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                No RSS sources configured
+                No fetchable sources
               </p>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Add RSS URLs to your sources to enable fetching
+                Add RSS, YouTube, or Threads sources to enable fetching
               </p>
             </div>
           </div>
@@ -122,9 +125,12 @@ export function RssFetcher({
           <div className="space-y-3">
             {/* Source List */}
             <div className="space-y-2">
-              {rssSources.map((source) => {
+              {fetchableSources.map((source) => {
                 const result = results.find((r) => r.sourceId === source.id);
                 const isCurrentlyFetching = fetchingSourceId === source.id;
+                const isYouTube = source.type === 'youtube';
+                const isThreads = source.type === 'threads';
+                const displayUrl = source.rssUrl || source.websiteUrl;
 
                 return (
                   <div
@@ -132,13 +138,23 @@ export function RssFetcher({
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800"
                   >
                     <div className="flex items-center gap-3">
-                      <Rss className="w-4 h-4 text-orange-500" />
+                      {isYouTube ? (
+                        <Youtube className="w-4 h-4 text-red-500" />
+                      ) : isThreads ? (
+                        <svg className="w-4 h-4 text-zinc-900 dark:text-zinc-100" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.5 12.068V11.5h3.25v.568c0 2.776.646 5.058 1.869 6.59 1.142 1.432 2.925 2.213 5.157 2.255H12.186V24z"/>
+                          <path d="M17.243 21.063c-1.062.438-2.226.688-3.457.75v-3.126c.644-.044 1.256-.175 1.82-.389.689-.261 1.299-.639 1.814-1.122.526-.493.937-1.094 1.223-1.789.296-.718.446-1.52.446-2.387 0-.866-.15-1.668-.446-2.386-.286-.695-.697-1.297-1.223-1.79-.515-.483-1.125-.86-1.814-1.121-.564-.214-1.176-.345-1.82-.39V4h.007c1.231.062 2.395.312 3.457.75 1.178.487 2.213 1.178 3.077 2.052.863.874 1.545 1.918 2.027 3.104.475 1.166.716 2.41.716 3.726 0 1.316-.241 2.56-.716 3.726-.482 1.186-1.164 2.23-2.027 3.104-.864.874-1.899 1.565-3.077 2.052-.011.004-.022.009-.033.013z"/>
+                          <path d="M13.786 0h-.007c-1.231.062-2.395.312-3.457.75-1.178.487-2.213 1.178-3.077 2.052-.863.874-1.545 1.918-2.027 3.104-.475 1.166-.716 2.41-.716 3.726h3.25c0-.866.15-1.668.446-2.386.286-.695.697-1.297 1.223-1.79.515-.483 1.125-.86 1.814-1.121.564-.214 1.176-.345 1.82-.39h.409l.315.044V.937L13.786 0z"/>
+                        </svg>
+                      ) : (
+                        <Rss className="w-4 h-4 text-orange-500" />
+                      )}
                       <div>
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           {source.name}
                         </p>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[120px] sm:max-w-[200px]">
-                          {source.rssUrl}
+                          {displayUrl}
                         </p>
                       </div>
                     </div>

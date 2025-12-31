@@ -131,6 +131,29 @@ export function useFetchRss() {
         }
       }
 
+      // Handle YouTube channel sources
+      if (source.type === 'youtube') {
+        console.log(`[Fetch] Using YouTube channel fetch: ${source.websiteUrl}`);
+        try {
+          const result = await api.scrape.fetchYouTubeChannel(source.websiteUrl, 10);
+          console.log(`[Fetch] Got ${result.videosCount} videos from ${result.channelTitle}`);
+
+          return {
+            source,
+            items: result.videos.map(video => ({
+              title: video.title,
+              link: video.link,
+              content: video.description || `YouTube video from ${result.channelTitle}`,
+              pubDate: video.publishedAt,
+              mediaUrls: video.thumbnail ? [video.thumbnail] : [],
+            }))
+          };
+        } catch (err) {
+          console.error(`[Fetch] YouTube channel fetch failed:`, err);
+          throw err;
+        }
+      }
+
       // If source has RSS, use RSS feed
       if (source.rssUrl) {
         console.log(`[Fetch] Using RSS: ${source.rssUrl}`);
@@ -233,7 +256,7 @@ export function useFetchRss() {
       // Update lastFetchedAt for the source
       updateSource(source.id, { lastFetchedAt: new Date().toISOString() });
 
-      const method = source.type === 'threads' ? 'Threads' : (source.rssUrl ? 'RSS' : 'scraping');
+      const method = source.type === 'youtube' ? 'YouTube' : source.type === 'threads' ? 'Threads' : (source.rssUrl ? 'RSS' : 'scraping');
       toast.success(`Fetched ${addedCount} new articles from ${source.name} (${method})`);
     },
     onError: (error: ApiError) => {

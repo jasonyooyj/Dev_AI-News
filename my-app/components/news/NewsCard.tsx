@@ -7,12 +7,15 @@ import {
   Clock,
   Eye,
   Bookmark,
+  Youtube,
+  Rss,
+  Globe,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
-import { NewsItem, Source, NewsCategory, NEWS_CATEGORY_LABELS, PRIORITY_LABELS, Priority } from '@/types/news';
+import { NewsItem, Source, NewsCategory, NEWS_CATEGORY_LABELS, PRIORITY_LABELS, Priority, SourceType } from '@/types/news';
 import { formatCompactDate } from '@/lib/date';
 
 interface NewsCardProps {
@@ -22,6 +25,64 @@ interface NewsCardProps {
   onDelete?: (news: NewsItem) => void;
   onBookmark?: (news: NewsItem) => void;
   isSummarizing?: boolean;
+}
+
+// Platform-specific styles
+const platformStyles: Record<SourceType, { border: string; shadow: string; iconColor: string; bg: string }> = {
+  youtube: {
+    border: 'border-l-4 border-l-red-500',
+    shadow: 'hover:shadow-red-500/10',
+    iconColor: 'text-red-500',
+    bg: 'bg-red-500',
+  },
+  threads: {
+    border: 'border-l-4 border-l-zinc-800 dark:border-l-zinc-300',
+    shadow: 'hover:shadow-zinc-500/10',
+    iconColor: 'text-zinc-800 dark:text-zinc-200',
+    bg: 'bg-zinc-800 dark:bg-zinc-300',
+  },
+  twitter: {
+    border: 'border-l-4 border-l-zinc-900 dark:border-l-zinc-100',
+    shadow: 'hover:shadow-zinc-500/10',
+    iconColor: 'text-zinc-900 dark:text-zinc-100',
+    bg: 'bg-zinc-900 dark:bg-zinc-100',
+  },
+  rss: {
+    border: 'border-l-4 border-l-orange-500',
+    shadow: 'hover:shadow-orange-500/10',
+    iconColor: 'text-orange-500',
+    bg: 'bg-orange-500',
+  },
+  blog: {
+    border: 'border-l-4 border-l-blue-500',
+    shadow: 'hover:shadow-blue-500/10',
+    iconColor: 'text-blue-500',
+    bg: 'bg-blue-500',
+  },
+};
+
+// Platform icon component
+function PlatformIcon({ type, className }: { type: SourceType; className?: string }) {
+  const iconClass = `w-3.5 h-3.5 ${className || ''}`;
+
+  switch (type) {
+    case 'youtube':
+      return <Youtube className={iconClass} />;
+    case 'threads':
+      return (
+        <svg className={iconClass} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.5 12.068V11.5h3.25v.568c0 2.776.646 5.058 1.869 6.59 1.142 1.432 2.925 2.213 5.157 2.255H12.186V24z"/>
+          <path d="M17.243 21.063c-1.062.438-2.226.688-3.457.75v-3.126c.644-.044 1.256-.175 1.82-.389.689-.261 1.299-.639 1.814-1.122.526-.493.937-1.094 1.223-1.789.296-.718.446-1.52.446-2.387 0-.866-.15-1.668-.446-2.386-.286-.695-.697-1.297-1.223-1.79-.515-.483-1.125-.86-1.814-1.121-.564-.214-1.176-.345-1.82-.39V4h.007c1.231.062 2.395.312 3.457.75 1.178.487 2.213 1.178 3.077 2.052.863.874 1.545 1.918 2.027 3.104.475 1.166.716 2.41.716 3.726 0 1.316-.241 2.56-.716 3.726-.482 1.186-1.164 2.23-2.027 3.104-.864.874-1.899 1.565-3.077 2.052z"/>
+          <path d="M13.786 0h-.007c-1.231.062-2.395.312-3.457.75-1.178.487-2.213 1.178-3.077 2.052-.863.874-1.545 1.918-2.027 3.104-.475 1.166-.716 2.41-.716 3.726h3.25c0-.866.15-1.668.446-2.386.286-.695.697-1.297 1.223-1.79.515-.483 1.125-.86 1.814-1.121.564-.214 1.176-.345 1.82-.39h.409l.315.044V.937L13.786 0z"/>
+        </svg>
+      );
+    case 'twitter':
+      return <span className={`${iconClass} font-bold flex items-center justify-center`}>𝕏</span>;
+    case 'rss':
+      return <Rss className={iconClass} />;
+    default:
+      return <Globe className={iconClass} />;
+  }
 }
 
 const categoryVariants: Record<NewsCategory, 'info' | 'success' | 'warning' | 'danger' | 'default'> = {
@@ -81,11 +142,15 @@ export const NewsCard = memo(function NewsCard({
   const priority = news.priority || 'medium';
   const priorityStyle = priorityStyles[priority];
 
+  // Get platform style based on source type
+  const sourceType = source?.type || 'blog';
+  const platformStyle = platformStyles[sourceType];
+
   return (
     <Card
       variant="default"
       padding="none"
-      className="group hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden relative flex flex-col"
+      className={`group hover:shadow-lg ${platformStyle.shadow} hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 overflow-hidden relative flex flex-col h-full ${platformStyle.border}`}
     >
       {/* Priority Badge - 카드 좌상단 */}
       {priority !== 'medium' && (
@@ -100,7 +165,8 @@ export const NewsCard = memo(function NewsCard({
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             {source && (
-              <Badge variant="default" size="sm">
+              <Badge variant="default" size="sm" className="flex items-center gap-1.5">
+                <PlatformIcon type={sourceType} className={platformStyle.iconColor} />
                 {source.name}
               </Badge>
             )}
@@ -122,7 +188,7 @@ export const NewsCard = memo(function NewsCard({
         {/* Title - 클릭 시 상세 보기 */}
         <h3
           onClick={() => onView?.(news)}
-          className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-3 leading-relaxed hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+          className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-3 leading-snug line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
         >
           {news.title}
         </h3>

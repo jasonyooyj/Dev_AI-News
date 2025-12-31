@@ -78,6 +78,23 @@ interface ThreadsProfileResponse {
   postsCount: number;
 }
 
+// YouTube Channel API types
+interface YouTubeVideo {
+  videoId: string;
+  title: string;
+  link: string;
+  description: string;
+  publishedAt: string;
+  thumbnail: string;
+}
+
+interface YouTubeChannelResponse {
+  channelId: string;
+  channelTitle: string;
+  videos: YouTubeVideo[];
+  videosCount: number;
+}
+
 // Social Media API types
 interface BlueskyConnectResponse {
   success: boolean;
@@ -355,6 +372,16 @@ export const api = {
         body: JSON.stringify({ url, limit: limit || 10 }),
       });
       return handleResponse<ThreadsProfileResponse>(response);
+    },
+
+    // Fetch YouTube channel videos
+    fetchYouTubeChannel: async (url: string, limit?: number): Promise<YouTubeChannelResponse> => {
+      const response = await fetch('/api/youtube/channel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, limit: limit || 10 }),
+      });
+      return handleResponse<YouTubeChannelResponse>(response);
     },
   },
 

@@ -7,6 +7,10 @@ import {
   Grid3X3,
   List,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Newspaper,
   Bookmark,
   RefreshCw,
@@ -49,6 +53,8 @@ export function NewsList({
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterSourceId, setFilterSourceId] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 99;
 
   const sourceMap = useMemo(() => {
     return sources.reduce(
@@ -100,6 +106,23 @@ export function NewsList({
       bookmarked,
     };
   }, [news]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredNews.length / itemsPerPage);
+  const paginatedNews = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredNews.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredNews, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus, filterSourceId]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (isLoading) {
     return (
@@ -276,25 +299,132 @@ export function NewsList({
           </div>
         </div>
       ) : (
-        <div
-          className={
-            viewMode === 'grid'
-              ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start'
-              : 'flex flex-col gap-3'
-          }
-        >
-          {filteredNews.map((item) => (
-            <NewsCard
-              key={item.id}
-              news={item}
-              source={sourceMap[item.sourceId]}
-              onView={onView}
-              onDelete={onDelete}
-              onBookmark={onBookmark}
-              isSummarizing={summarizingIds.includes(item.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div
+            className={
+              viewMode === 'grid'
+                ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'
+                : 'flex flex-col gap-3'
+            }
+          >
+            {paginatedNews.map((item) => (
+              <NewsCard
+                key={item.id}
+                news={item}
+                source={sourceMap[item.sourceId]}
+                onView={onView}
+                onDelete={onDelete}
+                onBookmark={onBookmark}
+                isSummarizing={summarizingIds.includes(item.id)}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 mt-8 border-t border-zinc-200 dark:border-zinc-800">
+              {/* Page Info */}
+              <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredNews.length)} of {filteredNews.length} items
+              </div>
+
+              {/* Page Controls */}
+              <div className="flex items-center gap-1">
+                {/* First Page */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                  aria-label="First page"
+                  className="hidden sm:flex"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </Button>
+
+                {/* Previous */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    const pages: (number | string)[] = [];
+                    const showPages = 5; // Max visible page numbers
+                    let start = Math.max(1, currentPage - Math.floor(showPages / 2));
+                    const end = Math.min(totalPages, start + showPages - 1);
+
+                    if (end - start + 1 < showPages) {
+                      start = Math.max(1, end - showPages + 1);
+                    }
+
+                    if (start > 1) {
+                      pages.push(1);
+                      if (start > 2) pages.push('...');
+                    }
+
+                    for (let i = start; i <= end; i++) {
+                      pages.push(i);
+                    }
+
+                    if (end < totalPages) {
+                      if (end < totalPages - 1) pages.push('...');
+                      pages.push(totalPages);
+                    }
+
+                    return pages.map((page, idx) => (
+                      typeof page === 'number' ? (
+                        <Button
+                          key={page}
+                          variant={page === currentPage ? 'primary' : 'ghost'}
+                          size="sm"
+                          onClick={() => handlePageChange(page)}
+                          className={`min-w-[36px] ${page === currentPage ? '' : 'text-zinc-600 dark:text-zinc-400'}`}
+                        >
+                          {page}
+                        </Button>
+                      ) : (
+                        <span key={`ellipsis-${idx}`} className="px-2 text-zinc-400">
+                          {page}
+                        </span>
+                      )
+                    ));
+                  })()}
+                </div>
+
+                {/* Next */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+
+                {/* Last Page */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                  aria-label="Last page"
+                  className="hidden sm:flex"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -4,8 +4,7 @@ import { useState, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { NewsList } from '@/components/news/NewsList';
 import { NewsDetail } from '@/components/news/NewsDetail';
-import { RssFetcher } from '@/components/collect/RssFetcher';
-import { UrlScraper } from '@/components/collect/UrlScraper';
+import { ContentFetcher } from '@/components/collect/ContentFetcher';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useSources } from '@/hooks/useSources';
@@ -145,10 +144,13 @@ export function Dashboard() {
   }, [fetchFromRss]);
 
   const handleFetchAll = useCallback(async (): Promise<FetchResult[]> => {
-    const rssSources = activeSources.filter((s) => s.rssUrl);
+    // Include sources with rssUrl OR supported types (youtube, threads)
+    const fetchableSources = activeSources.filter((s) =>
+      s.rssUrl || s.type === 'youtube' || s.type === 'threads'
+    );
     const results: FetchResult[] = [];
 
-    for (const source of rssSources) {
+    for (const source of fetchableSources) {
       const result = await handleFetchSource(source);
       results.push(result);
     }
@@ -290,17 +292,13 @@ export function Dashboard() {
             summarizingIds={summarizingIds}
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RssFetcher
-              sources={activeSources}
-              onFetchAll={handleFetchAll}
-              onFetchSource={handleFetchSource}
-            />
-            <UrlScraper
-              onScrape={handleScrape}
-              onSave={handleSaveScrapedContent}
-            />
-          </div>
+          <ContentFetcher
+            sources={activeSources}
+            onFetchAll={handleFetchAll}
+            onFetchSource={handleFetchSource}
+            onScrape={handleScrape}
+            onSave={handleSaveScrapedContent}
+          />
         )}
 
         {/* News Detail Modal */}
