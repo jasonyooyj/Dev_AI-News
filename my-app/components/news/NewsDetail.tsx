@@ -242,12 +242,12 @@ function StyleTemplateDropdown({
 function SummaryTabContent({ quickSummary }: { quickSummary?: QuickSummary }) {
   if (!quickSummary) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
-        <div className="p-4 rounded-full bg-zinc-100 dark:bg-zinc-800">
-          <ListChecks className="w-8 h-8 text-zinc-400" />
+      <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
+        <div className="p-3 rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <ListChecks className="w-6 h-6 text-zinc-400" />
         </div>
         <div>
-          <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+          <h3 className="text-base font-medium text-zinc-900 dark:text-zinc-100 mb-1">
             No summary available
           </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -259,7 +259,7 @@ function SummaryTabContent({ quickSummary }: { quickSummary?: QuickSummary }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Category Badge */}
       <div className="flex items-center gap-2">
         <Badge
@@ -274,17 +274,17 @@ function SummaryTabContent({ quickSummary }: { quickSummary?: QuickSummary }) {
       </div>
 
       {/* Summary Bullets */}
-      <Card variant="default" padding="lg">
-        <h4 className="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-3">
+      <Card variant="default" padding="md">
+        <h4 className="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">
           Key Points
         </h4>
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {quickSummary.bullets.map((bullet, index) => (
-            <li key={index} className="flex gap-3">
-              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-medium">
+            <li key={index} className="flex gap-2.5">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-medium">
                 {index + 1}
               </span>
-              <span className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              <span className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
                 {bullet}
               </span>
             </li>
@@ -391,7 +391,7 @@ function FullArticleTabContent({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-4">
+      <div className="flex flex-col items-center justify-center py-6 gap-3">
         <Spinner size="lg" />
         <div className="text-center">
           <p className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -432,7 +432,7 @@ function FullArticleTabContent({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Translated badge */}
       <div className="flex items-center gap-2">
         <Badge variant="info" size="sm">
@@ -441,8 +441,8 @@ function FullArticleTabContent({
       </div>
 
       {/* Article content with Notion-style markdown rendering */}
-      <div className="bg-white dark:bg-zinc-900/80 rounded-lg p-4 sm:p-6 md:p-8 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
-        <article className="prose">
+      <div className="bg-white dark:bg-zinc-900/80 rounded-lg p-4 sm:p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+        <article className="prose prose-sm">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {displayContent || ''}
           </ReactMarkdown>
@@ -450,7 +450,7 @@ function FullArticleTabContent({
       </div>
 
       {/* Original link */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between pt-1">
         <a
           href={url}
           target="_blank"
@@ -515,7 +515,7 @@ function GenerateContentTabContent({
   newsUrl?: string;
 }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Platform Selector Buttons */}
       <div>
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
@@ -576,7 +576,7 @@ function GenerateContentTabContent({
 
       {/* Generated Content Preview */}
       {isGenerating && !generatedContent && (
-        <div className="flex flex-col items-center justify-center py-12 gap-4">
+        <div className="flex flex-col items-center justify-center py-6 gap-3">
           <Spinner size="lg" />
           <div className="text-center">
             <p className="font-medium text-zinc-900 dark:text-zinc-100">
@@ -815,7 +815,7 @@ export function NewsDetail({
       title={news.title}
       size="xl"
     >
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Meta Info */}
         <div className="flex flex-wrap items-center gap-3">
           {source && (

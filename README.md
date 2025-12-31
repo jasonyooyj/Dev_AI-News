@@ -2,7 +2,7 @@
 
 > AI 뉴스 수집 → AI 요약 → 소셜 미디어 콘텐츠 자동 생성 웹 대시보드
 
-![Version](https://img.shields.io/badge/version-0.9.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.9.1-blue?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
@@ -120,8 +120,21 @@ my-app/
 | 10KB 콘텐츠 제한 | API 페이로드 제한 |
 | Twitter/X 미지원 | API 비용 ($100+/월) |
 
+## MCP 설정 (Claude Code)
+
+프로젝트 루트에 `.mcp.json` 파일이 포함되어 있어 Claude Code에서 다음 도구를 사용할 수 있습니다:
+
+| MCP | 용도 |
+|-----|------|
+| **Firecrawl** | 웹 스크래핑 지원 |
+| **Brave Search** | AI 뉴스 검색 |
+| **Browser** | 브라우저 자동화 |
+
+사용하려면 환경변수 설정 필요: `FIRECRAWL_API_KEY`, `BRAVE_API_KEY`
+
 ## 버전 히스토리
 
+- **v0.9.1** - NewsDetail 모달 레이아웃 개선, MCP 설정 추가
 - **v0.9.0** - Gemini AI 전환, YouTube/Twitter/Threads 스크래핑, 우선순위 시스템
 - **v0.8.1** - README 문서 전면 개편 및 Firebase 설정 파일 정리
 - **v0.8.0** - 인증 제거, 공개 접근 모델
