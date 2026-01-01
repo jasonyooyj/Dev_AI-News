@@ -13,7 +13,6 @@ import {
   ChevronsRight,
   Newspaper,
   Bookmark,
-  RefreshCw,
 } from 'lucide-react';
 import { NewsCard } from './NewsCard';
 import { Input } from '@/components/ui/Input';
@@ -32,8 +31,6 @@ interface NewsListProps {
   onView?: (news: NewsItem) => void;
   onDelete?: (news: NewsItem) => void;
   onBookmark?: (news: NewsItem) => void;
-  onReloadAll?: () => Promise<void>;
-  isReloading?: boolean;
   summarizingIds?: string[];
 }
 
@@ -44,8 +41,6 @@ export function NewsList({
   onView,
   onDelete,
   onBookmark,
-  onReloadAll,
-  isReloading = false,
   summarizingIds = [],
 }: NewsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -266,19 +261,6 @@ export function NewsList({
             )}
           </div>
         </div>
-        {onReloadAll && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onReloadAll}
-            disabled={isReloading}
-            leftIcon={
-              <RefreshCw className={`w-4 h-4 ${isReloading ? 'animate-spin' : ''}`} />
-            }
-          >
-            {isReloading ? 'Reloading...' : 'Reload All'}
-          </Button>
-        )}
       </div>
 
       {/* News Grid/List */}
