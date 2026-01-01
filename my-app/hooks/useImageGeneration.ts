@@ -1,14 +1,11 @@
 import { useState, useCallback } from "react";
 import { Platform, GeneratedImage, PLATFORM_IMAGE_SIZES } from "@/types/news";
 
-type ImageStyle = "modern" | "minimal" | "tech" | "gradient";
-
 interface ImageGenerationOptions {
   headline: string;
   summary?: string;
   platform: Platform;
   aspectRatio?: string;
-  style?: ImageStyle;
 }
 
 interface ImageGenerationResult {
@@ -40,8 +37,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
         headline,
         summary,
         platform,
-        aspectRatio = "16:9",
-        style = "modern",
+        aspectRatio = "9:16",
       } = options;
 
       setIsGenerating(true);
@@ -57,7 +53,6 @@ export function useImageGeneration(): UseImageGenerationReturn {
             summary: summary || headline,
             platform,
             aspectRatio,
-            style,
           }),
         });
 
@@ -104,26 +99,3 @@ export function useImageGeneration(): UseImageGenerationReturn {
   };
 }
 
-// 이미지 스타일 옵션
-export const IMAGE_STYLES: { value: ImageStyle; label: string; description: string }[] = [
-  {
-    value: "modern",
-    label: "모던",
-    description: "깔끔하고 전문적인 디자인",
-  },
-  {
-    value: "tech",
-    label: "테크",
-    description: "미래지향적인 기술 느낌",
-  },
-  {
-    value: "gradient",
-    label: "그라데이션",
-    description: "화려한 색상 그라데이션",
-  },
-  {
-    value: "minimal",
-    label: "미니멀",
-    description: "심플하고 깔끔한 스타일",
-  },
-];

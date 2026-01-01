@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Sparkles, RefreshCw, Check } from "lucide-react";
+import { Sparkles, RefreshCw, Loader2, Palette, Download, Copy, ImageIcon, Images, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import {
@@ -10,7 +10,8 @@ import {
   PLATFORM_IMAGE_SIZES,
   PLATFORM_CONFIGS,
 } from "@/types/news";
-import { useImageGeneration, IMAGE_STYLES } from "@/hooks/useImageGeneration";
+import { useImageGeneration } from "@/hooks/useImageGeneration";
+import { useImageGallery, SavedImage } from "@/hooks/useImageGallery";
 
 interface ImageGeneratorProps {
   headline: string;
@@ -19,8 +20,6 @@ interface ImageGeneratorProps {
   platforms?: Platform[];
   onImageGenerated?: (platform: Platform, image: GeneratedImage) => void;
 }
-
-type ImageStyle = "modern" | "minimal" | "tech" | "gradient";
 
 interface HeadlineSuggestion {
   main: string;
@@ -35,20 +34,35 @@ export function ImageGenerator({
   onImageGenerated,
 }: ImageGeneratorProps) {
   const { isGenerating, error, generateImage, getSizes } = useImageGeneration();
+  const { images: galleryImages, addImage, deleteImage, clearAll, count: galleryCount, getTotalSize } = useImageGallery();
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>(platforms[0]);
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("16:9");
-  const [selectedStyle, setSelectedStyle] = useState<ImageStyle>("modern");
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("9:16");
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
+  const [showGallery, setShowGallery] = useState(false);
 
-  // Editable headline state
-  const [editableHeadline, setEditableHeadline] = useState(initialHeadline);
+  // Editable headline state - use ref to track if user has edited
+  const [editableHeadline, setEditableHeadline] = useState(initialHeadline || "");
   const [suggestions, setSuggestions] = useState<HeadlineSuggestion | null>(null);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [hasUserEdited, setHasUserEdited] = useState(false);
 
-  // Update editable headline when prop changes
+  // Only update from prop if user hasn't manually edited
   useEffect(() => {
-    setEditableHeadline(initialHeadline);
+    if (!hasUserEdited && initialHeadline) {
+      setEditableHeadline(initialHeadline);
+    }
+  }, [initialHeadline, hasUserEdited]);
+
+  // Reset hasUserEdited when modal closes/reopens (initialHeadline changes significantly)
+  useEffect(() => {
+    setHasUserEdited(false);
   }, [initialHeadline]);
+
+  // Handle user input
+  const handleHeadlineChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditableHeadline(e.target.value);
+    setHasUserEdited(true);
+  }, []);
 
   const platformSizes = getSizes(selectedPlatform);
 
@@ -92,6 +106,7 @@ export function ImageGenerator({
 
   const handleSelectSuggestion = useCallback((suggestion: string) => {
     setEditableHeadline(suggestion.replace(/\\n/g, "\n"));
+    setHasUserEdited(true);
   }, []);
 
   const handleGenerate = useCallback(async () => {
@@ -100,12 +115,22 @@ export function ImageGenerator({
       summary,
       platform: selectedPlatform,
       aspectRatio: selectedAspectRatio,
-      style: selectedStyle,
     });
 
     if (result) {
       setGeneratedImage(result);
       onImageGenerated?.(selectedPlatform, result);
+
+      // 갤러리에 저장
+      addImage({
+        base64: result.base64,
+        mimeType: result.mimeType,
+        headline: editableHeadline,
+        platform: selectedPlatform,
+        aspectRatio: selectedAspectRatio,
+        width: result.width,
+        height: result.height,
+      });
     }
   }, [
     generateImage,
@@ -113,8 +138,8 @@ export function ImageGenerator({
     summary,
     selectedPlatform,
     selectedAspectRatio,
-    selectedStyle,
     onImageGenerated,
+    addImage,
   ]);
 
   const handleDownload = useCallback(() => {
@@ -177,10 +202,12 @@ export function ImageGenerator({
 
         <textarea
           value={editableHeadline}
-          onChange={(e) => setEditableHeadline(e.target.value)}
-          className="w-full p-3 bg-muted rounded-lg text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
+          onChange={handleHeadlineChange}
+          className="w-full p-3 bg-white dark:bg-zinc-900 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 border-2 border-zinc-300 dark:border-zinc-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 outline-none resize-vertical min-h-[80px]"
           rows={3}
           placeholder="이미지에 표시될 헤드라인을 입력하세요"
+          autoComplete="off"
+          spellCheck={false}
         />
 
         <p className="mt-1 text-xs text-muted-foreground">
@@ -276,29 +303,6 @@ export function ImageGenerator({
         </div>
       </div>
 
-      {/* 스타일 선택 */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          이미지 스타일
-        </label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {IMAGE_STYLES.map((style) => (
-            <button
-              key={style.value}
-              className={`p-3 rounded-lg border text-left transition-all ${
-                selectedStyle === style.value
-                  ? "border-primary bg-primary/10"
-                  : "border-border hover:border-primary/50"
-              }`}
-              onClick={() => setSelectedStyle(style.value)}
-            >
-              <div className="font-medium text-sm">{style.label}</div>
-              <div className="text-xs text-muted-foreground">{style.description}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* 생성 버튼 */}
       <Button
         variant="primary"
@@ -308,12 +312,13 @@ export function ImageGenerator({
       >
         {isGenerating ? (
           <>
-            <span className="animate-spin mr-2">⏳</span>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             이미지 생성 중...
           </>
         ) : (
           <>
-            🎨 이미지 생성하기
+            <Palette className="w-4 h-4 mr-2" />
+            이미지 생성하기
           </>
         )}
       </Button>
@@ -348,7 +353,8 @@ export function ImageGenerator({
                 className="flex-1"
                 onClick={handleDownload}
               >
-                📥 다운로드
+                <Download className="w-4 h-4 mr-1" />
+                다운로드
               </Button>
               <Button
                 variant="secondary"
@@ -356,12 +362,179 @@ export function ImageGenerator({
                 className="flex-1"
                 onClick={handleCopyToClipboard}
               >
-                📋 복사
+                <Copy className="w-4 h-4 mr-1" />
+                복사
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* 갤러리 버튼 */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setShowGallery(true)}
+        className="w-full text-muted-foreground"
+      >
+        <Images className="w-4 h-4 mr-2" />
+        저장된 이미지 보기 ({galleryCount}개)
+      </Button>
+
+      {/* 갤러리 모달 */}
+      {showGallery && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setShowGallery(false)}
+          />
+          <div className="relative z-10 w-full max-w-4xl max-h-[85vh] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+            {/* 헤더 */}
+            <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  이미지 갤러리
+                </h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  {galleryCount}개 이미지 • {getTotalSize()}MB
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {galleryCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm("모든 이미지를 삭제하시겠습니까?")) {
+                        clearAll();
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    전체 삭제
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowGallery(false)}
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* 갤러리 그리드 */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {galleryCount === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Images className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mb-4" />
+                  <p className="text-zinc-500 dark:text-zinc-400">
+                    아직 저장된 이미지가 없습니다
+                  </p>
+                  <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1">
+                    이미지를 생성하면 자동으로 저장됩니다
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {galleryImages.map((img) => (
+                    <GalleryImageCard
+                      key={img.id}
+                      image={img}
+                      onDelete={() => deleteImage(img.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 갤러리 이미지 카드 컴포넌트
+interface GalleryImageCardProps {
+  image: SavedImage;
+  onDelete: () => void;
+}
+
+function GalleryImageCard({ image, onDelete }: GalleryImageCardProps) {
+  const handleDownload = () => {
+    const link = document.createElement("a");
+    link.href = `data:${image.mimeType};base64,${image.base64}`;
+    link.download = `${image.platform}-${image.aspectRatio.replace(":", "x")}-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopy = async () => {
+    try {
+      const response = await fetch(`data:${image.mimeType};base64,${image.base64}`);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ [image.mimeType]: blob }),
+      ]);
+      alert("이미지가 클립보드에 복사되었습니다!");
+    } catch (err) {
+      console.error("Failed to copy image:", err);
+    }
+  };
+
+  const formattedDate = new Date(image.createdAt).toLocaleDateString("ko-KR", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return (
+    <div className="group relative rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+      <div className="aspect-[9/16] relative">
+        <img
+          src={`data:${image.mimeType};base64,${image.base64}`}
+          alt={image.headline}
+          className="w-full h-full object-cover"
+        />
+        {/* 호버 오버레이 */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+          <button
+            onClick={handleDownload}
+            className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
+            title="다운로드"
+          >
+            <Download className="w-4 h-4 text-zinc-700" />
+          </button>
+          <button
+            onClick={handleCopy}
+            className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
+            title="복사"
+          >
+            <Copy className="w-4 h-4 text-zinc-700" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-2 bg-red-500/90 rounded-full hover:bg-red-500 transition-colors"
+            title="삭제"
+          >
+            <Trash2 className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      </div>
+      {/* 정보 */}
+      <div className="p-2">
+        <p className="text-xs text-zinc-900 dark:text-zinc-100 font-medium line-clamp-2 mb-1">
+          {image.headline}
+        </p>
+        <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400">
+          <span>{PLATFORM_CONFIGS[image.platform as Platform]?.name || image.platform}</span>
+          <span>{formattedDate}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -382,7 +555,7 @@ export function QuickImageButton({
 }: QuickImageButtonProps) {
   const { isGenerating, generateImage } = useImageGeneration();
   const sizes = PLATFORM_IMAGE_SIZES[platform];
-  const defaultAspectRatio = sizes?.[0]?.aspectRatio || "16:9";
+  const defaultAspectRatio = sizes?.[0]?.aspectRatio || "9:16";
 
   const handleClick = async () => {
     const result = await generateImage({
@@ -390,7 +563,6 @@ export function QuickImageButton({
       summary,
       platform,
       aspectRatio: defaultAspectRatio,
-      style: "modern",
     });
 
     if (result) {
@@ -406,7 +578,7 @@ export function QuickImageButton({
       disabled={isGenerating}
       title={`${PLATFORM_CONFIGS[platform].name}용 이미지 생성`}
     >
-      {isGenerating ? "⏳" : "🖼️"}
+      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
     </Button>
   );
 }

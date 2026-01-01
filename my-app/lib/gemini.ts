@@ -441,51 +441,96 @@ function convertAspectRatio(aspectRatio: string): string {
   return ratioMap[aspectRatio] || "1:1";
 }
 
-// AI 뉴스 이미지 생성 (nano-banana-3-pro)
+// 기사 내용 분석하여 이미지 프롬프트 생성
+async function analyzeContentForImage(
+  headline: string,
+  summary: string
+): Promise<string> {
+  const ai = getGeminiClient();
+
+  const analysisPrompt = `You are an expert at creating image generation prompts for news articles.
+
+Analyze this news headline and summary, then create a specific image prompt.
+
+Headline: ${headline}
+Summary: ${summary}
+
+Rules:
+1. If a specific PERSON is the focus (CEO, researcher, etc.):
+   - Describe them: "Professional portrait of [description], [ethnicity] [gender], [age]s, [clothing], [expression]"
+   - Use realistic photography style
+
+2. If a COMPANY/BRAND is the focus (OpenAI, Google, Meta, etc.):
+   - Feature their recognizable logo or brand colors prominently
+   - Modern corporate/tech environment
+
+3. If a PRODUCT/TECHNOLOGY is the focus:
+   - Show the product or a visualization of the technology
+   - Clean product photography style
+
+4. If it's an ABSTRACT CONCEPT (AI trend, market analysis, etc.):
+   - Use symbolic imagery, data visualizations, or conceptual art
+   - Modern, professional aesthetic
+
+Output ONLY the image description in English. Be specific about:
+- Main subject (person/logo/product/concept)
+- Environment/background
+- Lighting and mood
+- Camera angle and style
+- Colors
+
+Keep it under 100 words. No explanations, just the prompt.`;
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: analysisPrompt,
+    config: {
+      temperature: 0.7,
+    },
+  });
+
+  return response.text || "Modern tech workspace with abstract data visualization";
+}
+
+// AI 뉴스 이미지 생성 (기사 내용 기반 동적 프롬프트)
 export async function generateNewsImage(
   headline: string,
   summary: string,
-  platform: string,
-  aspectRatio: string = "16:9",
-  style: "modern" | "minimal" | "tech" | "gradient" = "modern"
+  _platform: string,
+  aspectRatio: string = "9:16"
 ): Promise<ImageGenerationResult> {
   const ai = getGeminiClient();
 
-  // 플랫폼별 스타일 가이드
-  const styleGuides: Record<string, string> = {
-    modern: "sleek, professional design with clean lines, subtle gradients, and tech-inspired aesthetics",
-    minimal: "minimalist design with lots of white space, simple geometric shapes, and elegant typography placeholder areas",
-    tech: "futuristic tech aesthetic with circuit patterns, glowing elements, and dark theme with neon accents",
-    gradient: "vibrant gradient backgrounds transitioning between colors, modern and eye-catching design",
-  };
+  // 1단계: 기사 내용 분석하여 이미지 설명 생성
+  const imageDescription = await analyzeContentForImage(headline, summary);
 
-  const platformStyles: Record<string, string> = {
-    twitter: "bold and impactful, optimized for quick scrolling, dark sophisticated background",
-    threads: "conversational and modern, Instagram-inspired aesthetics with clean lines",
-    instagram: "visually stunning, aesthetic-focused with strong visual hierarchy",
-    linkedin: "professional and corporate, business-appropriate colors and clean layout",
-    bluesky: "fresh and modern, open-source community inspired design",
-  };
+  // 헤드라인 줄바꿈 처리
+  const formattedHeadline = headline.trim();
 
-  const prompt = `Create a professional social media image for AI/tech news.
+  // 2단계: 최종 이미지 생성 프롬프트
+  const prompt = `Create a professional social media news card image.
 
-Style: ${styleGuides[style] || styleGuides.modern}
-Platform vibe: ${platformStyles[platform] || platformStyles.twitter}
+SCENE TO GENERATE:
+${imageDescription}
 
-Design requirements:
-- Create a visually striking background suitable for news content
-- Include abstract tech-inspired visual elements (subtle patterns, shapes, or gradients)
-- Leave a prominent space at the top (upper 25%) for headline text overlay
-- The design should NOT include any text - text will be added programmatically later
-- Use a color palette appropriate for AI/tech content (blues, purples, or dark themes with accent colors)
-- Ensure the design has good contrast for text readability
-- Make it look professional and suitable for ${platform}
+CRITICAL - HEADLINE TEXT:
+Display this exact text in the upper portion:
+"${formattedHeadline}"
 
-Content context (for design inspiration only, don't add text):
-- Topic: ${headline}
-- Summary: ${summary.substring(0, 200)}
+Text requirements:
+- Bold Pretendard font (Korean sans-serif)
+- White color with subtle shadow for contrast
+- Positioned in upper 1/3, CENTER-ALIGNED horizontally
+- Large enough to read on mobile
 
-Important: Generate an image WITHOUT any text. The image should be a background/template where Korean text will be overlaid programmatically using Pretendard font.`;
+Technical specifications:
+- DSLR quality, 50mm lens, f/2.8 depth of field
+- Professional lighting, slight film color grading
+- Dark or muted background tones for text readability
+- 9:16 vertical composition
+- Subject in lower 2/3, text area in upper 1/3
+
+Style: Photorealistic, modern, professional tech/news aesthetic.`;
 
   const geminiAspectRatio = convertAspectRatio(aspectRatio);
 

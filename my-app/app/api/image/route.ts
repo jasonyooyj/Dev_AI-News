@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateNewsImage } from "@/lib/gemini";
-import { createFinalImage, getPlatformImageSize } from "@/lib/image-overlay";
-
-type ImageStyle = "modern" | "minimal" | "tech" | "gradient";
+import { getPlatformImageSize } from "@/lib/image-overlay";
 
 interface RequestBody {
   mode: "generate" | "sizes";
@@ -11,7 +9,6 @@ interface RequestBody {
   summary?: string;
   platform?: string;
   aspectRatio?: string;
-  style?: ImageStyle;
 }
 
 export async function POST(request: NextRequest) {
@@ -64,7 +61,7 @@ export async function POST(request: NextRequest) {
     // === MODE: generate ===
     // AI 배경 이미지 생성 + 헤드라인 텍스트 오버레이
     if (mode === "generate") {
-      const { headline, summary, platform, aspectRatio, style } = body;
+      const { headline, summary, platform, aspectRatio } = body;
 
       if (!headline || !platform) {
         return NextResponse.json(
@@ -78,23 +75,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invalid platform" }, { status: 400 });
       }
 
-      const targetAspectRatio = aspectRatio || "16:9";
-      const imageStyle = style || "modern";
+      const targetAspectRatio = aspectRatio || "9:16";
       const summaryText = summary || headline;
 
-      // 1. Gemini nano-banana-3-pro로 AI 배경 이미지 생성
+      // Gemini로 AI 이미지 생성 (헤드라인 텍스트 포함)
       const aiImage = await generateNewsImage(
         headline,
         summaryText,
-        platform,
-        targetAspectRatio,
-        imageStyle as ImageStyle
-      );
-
-      // 2. Sharp로 헤드라인 텍스트 오버레이
-      const finalImage = await createFinalImage(
-        aiImage.base64,
-        headline,
         platform,
         targetAspectRatio
       );
@@ -102,14 +89,13 @@ export async function POST(request: NextRequest) {
       const size = getPlatformImageSize(platform, targetAspectRatio);
 
       return NextResponse.json({
-        base64: finalImage.base64,
-        mimeType: finalImage.mimeType,
+        base64: aiImage.base64,
+        mimeType: aiImage.mimeType,
         width: size.width,
         height: size.height,
         aspectRatio: targetAspectRatio,
         headline,
         platform,
-        style: imageStyle,
         createdAt: new Date().toISOString(),
       });
     }
@@ -131,31 +117,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const headline = searchParams.get("headline") || "AI 뉴스";
     const platform = searchParams.get("platform") || "twitter";
-    const aspectRatio = searchParams.get("aspect") || "16:9";
-    const style = (searchParams.get("style") || "modern") as ImageStyle;
+    const aspectRatio = searchParams.get("aspect") || "9:16";
 
-    // AI 배경 이미지 생성
+    // AI 이미지 생성 (헤드라인 텍스트 포함)
     const aiImage = await generateNewsImage(
       headline,
-      headline,
-      platform,
-      aspectRatio,
-      style
-    );
-
-    // 헤드라인 텍스트 오버레이
-    const finalImage = await createFinalImage(
-      aiImage.base64,
       headline,
       platform,
       aspectRatio
     );
 
-    const imageBuffer = Buffer.from(finalImage.base64, "base64");
+    const imageBuffer = Buffer.from(aiImage.base64, "base64");
 
     return new NextResponse(imageBuffer, {
       headers: {
-        "Content-Type": "image/png",
+        "Content-Type": aiImage.mimeType || "image/png",
         "Cache-Control": "public, max-age=3600",
       },
     });
