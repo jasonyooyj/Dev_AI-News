@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Filter,
@@ -20,6 +21,41 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { NewsItem, Source } from '@/types/news';
+
+// Staggered animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.1,
+    },
+  },
+} as const;
+
+const cardVariants = {
+  hidden: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: 'spring' as const,
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: { duration: 0.2 },
+  },
+};
 
 type ViewMode = 'grid' | 'list';
 type FilterStatus = 'all' | 'summarized' | 'pending' | 'bookmarked';
@@ -282,25 +318,36 @@ export function NewsList({
         </div>
       ) : (
         <>
-          <div
+          <motion.div
+            key={`${currentPage}-${filterStatus}-${filterSourceId}`}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
             className={
               viewMode === 'grid'
                 ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'
                 : 'flex flex-col gap-3'
             }
           >
-            {paginatedNews.map((item) => (
-              <NewsCard
-                key={item.id}
-                news={item}
-                source={sourceMap[item.sourceId]}
-                onView={onView}
-                onDelete={onDelete}
-                onBookmark={onBookmark}
-                isSummarizing={summarizingIds.includes(item.id)}
-              />
-            ))}
-          </div>
+            <AnimatePresence mode="popLayout">
+              {paginatedNews.map((item) => (
+                <motion.div
+                  key={item.id}
+                  variants={cardVariants}
+                  layout
+                >
+                  <NewsCard
+                    news={item}
+                    source={sourceMap[item.sourceId]}
+                    onView={onView}
+                    onDelete={onDelete}
+                    onBookmark={onBookmark}
+                    isSummarizing={summarizingIds.includes(item.id)}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
 
           {/* Pagination */}
           {totalPages > 1 && (

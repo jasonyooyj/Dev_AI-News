@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { Sparkles, RefreshCw, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import {
@@ -14,15 +15,22 @@ import { useImageGeneration, IMAGE_STYLES } from "@/hooks/useImageGeneration";
 interface ImageGeneratorProps {
   headline: string;
   summary?: string;
+  originalContent?: string;
   platforms?: Platform[];
   onImageGenerated?: (platform: Platform, image: GeneratedImage) => void;
 }
 
 type ImageStyle = "modern" | "minimal" | "tech" | "gradient";
 
+interface HeadlineSuggestion {
+  main: string;
+  alternatives: string[];
+}
+
 export function ImageGenerator({
-  headline,
+  headline: initialHeadline,
   summary,
+  originalContent,
   platforms = ["twitter", "threads", "instagram", "linkedin", "bluesky"],
   onImageGenerated,
 }: ImageGeneratorProps) {
@@ -32,11 +40,20 @@ export function ImageGenerator({
   const [selectedStyle, setSelectedStyle] = useState<ImageStyle>("modern");
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
 
+  // Editable headline state
+  const [editableHeadline, setEditableHeadline] = useState(initialHeadline);
+  const [suggestions, setSuggestions] = useState<HeadlineSuggestion | null>(null);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+
+  // Update editable headline when prop changes
+  useEffect(() => {
+    setEditableHeadline(initialHeadline);
+  }, [initialHeadline]);
+
   const platformSizes = getSizes(selectedPlatform);
 
   const handlePlatformChange = useCallback((platform: Platform) => {
     setSelectedPlatform(platform);
-    // 플랫폼 변경 시 첫 번째 사이즈로 초기화
     const sizes = PLATFORM_IMAGE_SIZES[platform];
     if (sizes && sizes.length > 0) {
       setSelectedAspectRatio(sizes[0].aspectRatio);
@@ -44,9 +61,42 @@ export function ImageGenerator({
     setGeneratedImage(null);
   }, []);
 
+  const handleGenerateSuggestions = useCallback(async () => {
+    setIsLoadingSuggestions(true);
+    try {
+      const response = await fetch("/api/headline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: initialHeadline,
+          content: originalContent || summary,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate suggestions");
+      }
+
+      const data = await response.json();
+      setSuggestions(data);
+      // Auto-select the main suggestion
+      if (data.main) {
+        setEditableHeadline(data.main.replace(/\\n/g, "\n"));
+      }
+    } catch (err) {
+      console.error("Failed to generate headline suggestions:", err);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }, [initialHeadline, summary, originalContent]);
+
+  const handleSelectSuggestion = useCallback((suggestion: string) => {
+    setEditableHeadline(suggestion.replace(/\\n/g, "\n"));
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     const result = await generateImage({
-      headline,
+      headline: editableHeadline,
       summary,
       platform: selectedPlatform,
       aspectRatio: selectedAspectRatio,
@@ -59,7 +109,7 @@ export function ImageGenerator({
     }
   }, [
     generateImage,
-    headline,
+    editableHeadline,
     summary,
     selectedPlatform,
     selectedAspectRatio,
@@ -98,6 +148,93 @@ export function ImageGenerator({
 
   return (
     <div className="space-y-4">
+      {/* 헤드라인 편집 */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-foreground">
+            헤드라인 (이미지에 표시됨)
+          </label>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleGenerateSuggestions}
+            disabled={isLoadingSuggestions}
+            className="text-xs"
+          >
+            {isLoadingSuggestions ? (
+              <>
+                <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                생성 중...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3 h-3 mr-1" />
+                AI 추천
+              </>
+            )}
+          </Button>
+        </div>
+
+        <textarea
+          value={editableHeadline}
+          onChange={(e) => setEditableHeadline(e.target.value)}
+          className="w-full p-3 bg-muted rounded-lg text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
+          rows={3}
+          placeholder="이미지에 표시될 헤드라인을 입력하세요"
+        />
+
+        <p className="mt-1 text-xs text-muted-foreground">
+          팁: 2줄 이하, 줄당 10~12자가 가장 효과적입니다
+        </p>
+      </div>
+
+      {/* AI 추천 헤드라인 */}
+      {suggestions && (
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-muted-foreground">
+            AI 추천 헤드라인
+          </label>
+          <div className="space-y-1.5">
+            {/* Main suggestion */}
+            <button
+              onClick={() => handleSelectSuggestion(suggestions.main)}
+              className={`w-full p-2.5 text-left text-sm rounded-lg border transition-all ${
+                editableHeadline === suggestions.main.replace(/\\n/g, "\n")
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:border-primary/50 bg-card"
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-primary text-primary-foreground rounded">
+                  추천
+                </span>
+                <span className="whitespace-pre-wrap">{suggestions.main.replace(/\\n/g, "\n")}</span>
+              </div>
+            </button>
+
+            {/* Alternative suggestions */}
+            {suggestions.alternatives.map((alt, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSelectSuggestion(alt)}
+                className={`w-full p-2.5 text-left text-sm rounded-lg border transition-all ${
+                  editableHeadline === alt.replace(/\\n/g, "\n")
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-primary/50 bg-card"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground rounded">
+                    {idx + 1}
+                  </span>
+                  <span className="whitespace-pre-wrap">{alt.replace(/\\n/g, "\n")}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 플랫폼 선택 */}
       <div>
         <label className="block text-sm font-medium text-foreground mb-2">
@@ -162,22 +299,12 @@ export function ImageGenerator({
         </div>
       </div>
 
-      {/* 헤드라인 미리보기 */}
-      <div>
-        <label className="block text-sm font-medium text-foreground mb-2">
-          헤드라인 (이미지에 표시됨)
-        </label>
-        <div className="p-3 bg-muted rounded-lg text-sm">
-          {headline}
-        </div>
-      </div>
-
       {/* 생성 버튼 */}
       <Button
         variant="primary"
         className="w-full"
         onClick={handleGenerate}
-        disabled={isGenerating || !headline}
+        disabled={isGenerating || !editableHeadline.trim()}
       >
         {isGenerating ? (
           <>

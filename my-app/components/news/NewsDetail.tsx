@@ -921,6 +921,7 @@ export function NewsDetail({
             <ImageGenerator
               headline={news.quickSummary?.bullets?.[0] || news.title}
               summary={news.quickSummary?.bullets?.join(' ') || news.title}
+              originalContent={news.originalContent}
               platforms={platforms}
               onImageGenerated={(platform, image) => {
                 console.log('Image generated for', platform, image);
