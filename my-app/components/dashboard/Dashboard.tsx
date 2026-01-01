@@ -1,16 +1,18 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { NewsList } from '@/components/news/NewsList';
 import { NewsDetail } from '@/components/news/NewsDetail';
 import { ContentFetcher } from '@/components/collect/ContentFetcher';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useSources } from '@/hooks/useSources';
 import { useNews } from '@/hooks/useNews';
 import { useAI } from '@/hooks/useAI';
 import { useStyleTemplates } from '@/hooks/useStyleTemplates';
+import { useNewsStore } from '@/store';
 import { NewsItem, Source, Platform, PlatformContent } from '@/types/news';
 
 interface FetchResult {
@@ -33,6 +35,7 @@ export function Dashboard() {
   const { newsItems, isLoading: newsLoading, fetchFromRss, deleteNewsItem, toggleBookmark, refreshNews, addNewsItem } = useNews();
   const { generatePlatformContent, regenerateWithFeedback } = useAI();
   const { templates: styleTemplates } = useStyleTemplates();
+  const saveGeneratedContent = useNewsStore((s) => s.saveGeneratedContent);
 
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   // Get the actual news item from store (stays in sync with updates)
@@ -43,11 +46,21 @@ export function Dashboard() {
   const [generatedContents, setGeneratedContents] = useState<Partial<Record<Platform, PlatformContent>>>({});
   const [isRefreshingSources, setIsRefreshingSources] = useState(false);
 
-  const activeSources = sources.filter((s) => s.isActive);
+  // Memoized statistics calculations
+  const activeSources = useMemo(() => sources.filter((s) => s.isActive), [sources]);
+
+  const stats = useMemo(() => ({
+    total: newsItems.length,
+    summarized: newsItems.filter((n) => n.quickSummary && n.quickSummary.bullets.length > 0).length,
+    pending: newsItems.filter((n) => !n.quickSummary || n.quickSummary.bullets.length === 0).length,
+    bookmarked: newsItems.filter((n) => n.isBookmarked).length,
+    activeSources: activeSources.length,
+  }), [newsItems, activeSources]);
 
   const handleViewNews = (newsItem: NewsItem) => {
     setSelectedNewsId(newsItem.id);
-    setGeneratedContents({});
+    // Load saved generated contents from the news item
+    setGeneratedContents(newsItem.generatedContents || {});
   };
 
   const handleGenerateContent = async (
@@ -64,10 +77,13 @@ export function Dashboard() {
 
       const result = await generatePlatformContent(selectedNews, platform, styleTemplate);
       if (result) {
+        // Update local state
         setGeneratedContents((prev) => ({
           ...prev,
           [platform]: result,
         }));
+        // Save to DB for persistence
+        await saveGeneratedContent(selectedNews.id, platform, result);
         return result;
       }
       return null;
@@ -92,10 +108,13 @@ export function Dashboard() {
     try {
       const result = await regenerateWithFeedback(currentContent.content, feedback, platform);
       if (result) {
+        // Update local state
         setGeneratedContents((prev) => ({
           ...prev,
           [platform]: result,
         }));
+        // Save to DB for persistence
+        await saveGeneratedContent(selectedNews.id, platform, result);
         return result;
       }
       return null;
@@ -209,9 +228,7 @@ export function Dashboard() {
   if (sourcesLoading || newsLoading) {
     return (
       <MainLayout sources={sources}>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
+        <DashboardSkeleton />
       </MainLayout>
     );
   }
@@ -227,37 +244,31 @@ export function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{newsItems.length}</div>
+              <div className="text-2xl font-bold">{stats.total}</div>
               <div className="text-sm text-muted-foreground">Total News</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">
-                {newsItems.filter((n) => n.quickSummary && n.quickSummary.bullets.length > 0).length}
-              </div>
+              <div className="text-2xl font-bold text-green-600">{stats.summarized}</div>
               <div className="text-sm text-muted-foreground">Summarized</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-amber-600">
-                {newsItems.filter((n) => !n.quickSummary || n.quickSummary.bullets.length === 0).length}
-              </div>
+              <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
               <div className="text-sm text-muted-foreground">Pending</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-amber-500">
-                {newsItems.filter((n) => n.isBookmarked).length}
-              </div>
+              <div className="text-2xl font-bold text-amber-500">{stats.bookmarked}</div>
               <div className="text-sm text-muted-foreground">Bookmarked</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{activeSources.length}</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.activeSources}</div>
               <div className="text-sm text-muted-foreground">Active Sources</div>
             </CardContent>
           </Card>

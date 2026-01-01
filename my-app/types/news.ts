@@ -63,6 +63,8 @@ export interface NewsItem {
   quickSummary?: QuickSummary;  // 3줄 핵심 요약
   translatedContent?: string;   // 번역된 전체 기사 (캐시)
   translatedAt?: string;        // 번역 시간
+  generatedContents?: Partial<Record<Platform, PlatformContent>>;  // 플랫폼별 생성된 콘텐츠 (캐시)
+  generatedImages?: PlatformImages;  // 플랫폼별 생성된 이미지 (캐시)
 }
 
 export interface PlatformContent {
@@ -70,6 +72,55 @@ export interface PlatformContent {
   charCount?: number;
   hashtags?: string[];
 }
+
+// 플랫폼별 이미지 사이즈 설정
+export interface ImageSize {
+  width: number;
+  height: number;
+  aspectRatio: string;
+  label: string;
+}
+
+export const PLATFORM_IMAGE_SIZES: Record<Platform, ImageSize[]> = {
+  twitter: [
+    { width: 1200, height: 675, aspectRatio: '16:9', label: '가로 (16:9)' },
+    { width: 1080, height: 1080, aspectRatio: '1:1', label: '정사각형 (1:1)' },
+    { width: 1080, height: 1350, aspectRatio: '4:5', label: '세로 (4:5)' },
+  ],
+  threads: [
+    { width: 1080, height: 1350, aspectRatio: '4:5', label: '세로 (4:5)' },
+    { width: 1080, height: 1080, aspectRatio: '1:1', label: '정사각형 (1:1)' },
+    { width: 1080, height: 1920, aspectRatio: '9:16', label: '스토리 (9:16)' },
+  ],
+  instagram: [
+    { width: 1080, height: 1350, aspectRatio: '4:5', label: '피드 세로 (4:5)' },
+    { width: 1080, height: 1080, aspectRatio: '1:1', label: '피드 정사각형 (1:1)' },
+    { width: 1080, height: 1920, aspectRatio: '9:16', label: '스토리/릴스 (9:16)' },
+  ],
+  linkedin: [
+    { width: 1200, height: 627, aspectRatio: '1.91:1', label: '피드 가로 (1.91:1)' },
+    { width: 1200, height: 1200, aspectRatio: '1:1', label: '피드 정사각형 (1:1)' },
+    { width: 1920, height: 1080, aspectRatio: '16:9', label: '아티클 커버 (16:9)' },
+  ],
+  bluesky: [
+    { width: 1200, height: 675, aspectRatio: '16:9', label: '가로 (16:9)' },
+    { width: 1080, height: 1080, aspectRatio: '1:1', label: '정사각형 (1:1)' },
+  ],
+};
+
+// 생성된 이미지 정보
+export interface GeneratedImage {
+  base64: string;        // base64 인코딩된 이미지 데이터
+  mimeType: string;      // image/png, image/jpeg
+  width: number;
+  height: number;
+  aspectRatio: string;
+  headline: string;      // 이미지에 포함된 헤드라인
+  createdAt: string;
+}
+
+// 플랫폼별 생성된 이미지 맵
+export type PlatformImages = Partial<Record<Platform, GeneratedImage>>;
 
 export interface ProcessedNews {
   id: string;

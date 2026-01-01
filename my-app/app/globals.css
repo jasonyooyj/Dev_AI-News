@@ -134,6 +134,16 @@ body {
   color: var(--primary-foreground);
 }
 
+/* Skeleton Shimmer Animation */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Animation Utilities */
 @keyframes fade-in {
   from {

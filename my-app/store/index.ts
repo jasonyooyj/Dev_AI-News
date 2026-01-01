@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Source, NewsItem, StyleTemplate, Platform, QuickSummary } from '@/types/news';
+import { Source, NewsItem, StyleTemplate, Platform, QuickSummary, PlatformContent } from '@/types/news';
 import { DEFAULT_SOURCES } from '@/lib/constants';
 
 // API helper functions
@@ -39,6 +39,7 @@ interface NewsState {
   addSummary: (id: string, summary: QuickSummary) => Promise<void>;
   toggleBookmark: (id: string) => Promise<void>;
   saveTranslation: (id: string, translatedContent: string) => Promise<void>;
+  saveGeneratedContent: (id: string, platform: Platform, content: PlatformContent) => Promise<void>;
   reset: () => void;
 }
 
@@ -211,6 +212,20 @@ export const useNewsStore = create<NewsState>((set, get) => ({
     await get().updateNewsItem(id, {
       translatedContent,
       translatedAt: new Date().toISOString(),
+    });
+  },
+
+  saveGeneratedContent: async (id, platform, content) => {
+    const item = get().newsItems.find((n) => n.id === id);
+    if (!item) return;
+
+    const updatedContents = {
+      ...(item.generatedContents || {}),
+      [platform]: content,
+    };
+
+    await get().updateNewsItem(id, {
+      generatedContents: updatedContents,
     });
   },
 

@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 const MODEL = "gemini-3-flash-preview";
+const IMAGE_MODEL = "gemini-3-pro-image-preview"; // nano-banana-3-pro
 
 // Gemini 클라이언트 생성
 function getGeminiClient(): GoogleGenAI {
@@ -416,5 +417,114 @@ ${title ? `## ${title}\n\n` : ""}${trimmedContent.substring(0, 12000)}`;
     title: title || "",
     content: translatedContent,
     isTranslated: true,
+  };
+}
+
+// 이미지 생성 결과 타입
+export interface ImageGenerationResult {
+  base64: string;
+  mimeType: string;
+  description?: string;
+}
+
+// Aspect ratio를 Gemini API 형식으로 변환
+function convertAspectRatio(aspectRatio: string): string {
+  const ratioMap: Record<string, string> = {
+    "16:9": "16:9",
+    "1:1": "1:1",
+    "4:5": "4:5",
+    "9:16": "9:16",
+    "1.91:1": "16:9", // LinkedIn 근사치
+    "4:3": "4:3",
+    "3:4": "3:4",
+  };
+  return ratioMap[aspectRatio] || "1:1";
+}
+
+// AI 뉴스 이미지 생성 (nano-banana-3-pro)
+export async function generateNewsImage(
+  headline: string,
+  summary: string,
+  platform: string,
+  aspectRatio: string = "16:9",
+  style: "modern" | "minimal" | "tech" | "gradient" = "modern"
+): Promise<ImageGenerationResult> {
+  const ai = getGeminiClient();
+
+  // 플랫폼별 스타일 가이드
+  const styleGuides: Record<string, string> = {
+    modern: "sleek, professional design with clean lines, subtle gradients, and tech-inspired aesthetics",
+    minimal: "minimalist design with lots of white space, simple geometric shapes, and elegant typography placeholder areas",
+    tech: "futuristic tech aesthetic with circuit patterns, glowing elements, and dark theme with neon accents",
+    gradient: "vibrant gradient backgrounds transitioning between colors, modern and eye-catching design",
+  };
+
+  const platformStyles: Record<string, string> = {
+    twitter: "bold and impactful, optimized for quick scrolling, dark sophisticated background",
+    threads: "conversational and modern, Instagram-inspired aesthetics with clean lines",
+    instagram: "visually stunning, aesthetic-focused with strong visual hierarchy",
+    linkedin: "professional and corporate, business-appropriate colors and clean layout",
+    bluesky: "fresh and modern, open-source community inspired design",
+  };
+
+  const prompt = `Create a professional social media image for AI/tech news.
+
+Style: ${styleGuides[style] || styleGuides.modern}
+Platform vibe: ${platformStyles[platform] || platformStyles.twitter}
+
+Design requirements:
+- Create a visually striking background suitable for news content
+- Include abstract tech-inspired visual elements (subtle patterns, shapes, or gradients)
+- Leave a prominent space at the top (upper 25%) for headline text overlay
+- The design should NOT include any text - text will be added programmatically later
+- Use a color palette appropriate for AI/tech content (blues, purples, or dark themes with accent colors)
+- Ensure the design has good contrast for text readability
+- Make it look professional and suitable for ${platform}
+
+Content context (for design inspiration only, don't add text):
+- Topic: ${headline}
+- Summary: ${summary.substring(0, 200)}
+
+Important: Generate an image WITHOUT any text. The image should be a background/template where Korean text will be overlaid programmatically using Pretendard font.`;
+
+  const geminiAspectRatio = convertAspectRatio(aspectRatio);
+
+  const response = await ai.models.generateContent({
+    model: IMAGE_MODEL,
+    contents: prompt,
+    config: {
+      responseModalities: ["TEXT", "IMAGE"],
+      imageConfig: {
+        aspectRatio: geminiAspectRatio,
+        imageSize: "2K",
+      },
+    },
+  });
+
+  // 응답에서 이미지 추출
+  let base64 = "";
+  let mimeType = "image/png";
+  let description = "";
+
+  if (response.candidates && response.candidates[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData && part.inlineData.data) {
+        base64 = part.inlineData.data;
+        mimeType = part.inlineData.mimeType || "image/png";
+      }
+      if (part.text) {
+        description = part.text;
+      }
+    }
+  }
+
+  if (!base64) {
+    throw new Error("이미지 생성에 실패했습니다. 응답에 이미지가 없습니다.");
+  }
+
+  return {
+    base64,
+    mimeType,
+    description,
   };
 }

@@ -101,6 +101,14 @@ export const newsItems = pgTable('news_items', {
   }>(),
   translatedContent: text('translated_content'),
   translatedAt: timestamp('translated_at'),
+  // Generated platform contents stored as JSONB
+  generatedContents: jsonb('generated_contents').$type<{
+    twitter?: { content: string; charCount?: number; hashtags?: string[] };
+    threads?: { content: string; charCount?: number; hashtags?: string[] };
+    instagram?: { content: string; charCount?: number; hashtags?: string[] };
+    linkedin?: { content: string; charCount?: number; hashtags?: string[] };
+    bluesky?: { content: string; charCount?: number; hashtags?: string[] };
+  }>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

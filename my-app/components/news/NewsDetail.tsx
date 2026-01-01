@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Check,
   Bookmark,
+  ImageIcon,
 } from 'lucide-react';
 import { Modal, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +20,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { Card } from '@/components/ui/Card';
 import { useNewsStore } from '@/store';
+import { ImageGenerator } from '@/components/news/ImageGenerator';
 import { PlatformPreview } from '@/components/social/PlatformPreview';
 import { FeedbackButtons } from '@/components/social/FeedbackButtons';
 import { BlueskyPublishButton, BlueskyConnectModal, ThreadsPublishButton, ThreadsConnectModal, LinkedInPublishButton, LinkedInConnectModal, InstagramPublishButton, InstagramConnectModal } from '@/components/social';
@@ -32,6 +34,7 @@ import {
   StyleTemplate,
   QuickSummary,
   NewsCategory,
+  GeneratedImage,
   NEWS_CATEGORY_LABELS,
   PLATFORM_CONFIGS,
 } from '@/types/news';
@@ -103,7 +106,7 @@ interface NewsDetailProps {
   generatedContents: Partial<Record<Platform, PlatformContent>>;
 }
 
-type TabType = 'summary' | 'full-article' | 'generate';
+type TabType = 'summary' | 'full-article' | 'generate' | 'image';
 
 const CATEGORY_BADGE_VARIANTS: Record<NewsCategory, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
   product: 'info',
@@ -860,6 +863,13 @@ export function NewsDetail({
               isActive={activeTab === 'generate'}
               onClick={() => setActiveTab('generate')}
             />
+            <Tab
+              id="image"
+              label="Generate Image"
+              icon={<ImageIcon className="w-4 h-4" />}
+              isActive={activeTab === 'image'}
+              onClick={() => setActiveTab('image')}
+            />
           </div>
         </div>
 
@@ -901,6 +911,22 @@ export function NewsDetail({
             onPublishSuccess={handlePublishSuccess}
             newsUrl={news.url}
           />
+        )}
+
+        {activeTab === 'image' && (
+          <div className="space-y-4">
+            <div className="text-sm text-zinc-500 dark:text-zinc-400">
+              AI가 뉴스 내용에 맞는 이미지를 생성합니다. 상단에 Pretendard 폰트로 한글 헤드라인이 표시됩니다.
+            </div>
+            <ImageGenerator
+              headline={news.quickSummary?.bullets?.[0] || news.title}
+              summary={news.quickSummary?.bullets?.join(' ') || news.title}
+              platforms={platforms}
+              onImageGenerated={(platform, image) => {
+                console.log('Image generated for', platform, image);
+              }}
+            />
+          </div>
         )}
       </div>
 
