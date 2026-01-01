@@ -78,46 +78,29 @@ export function useStyleTemplates() {
     [setDefaultInStore]
   );
 
-  // Analyze examples to extract style
+  // Analyze examples - feature removed, returns null
   const analyzeExamples = useCallback(
-    async (examples: string[]): Promise<{
+    async (_examples: string[]): Promise<{
       tone: string;
       characteristics: string[];
     } | null> => {
-      if (examples.length === 0) return null;
-
-      try {
-        const result = await analyzeStyleMutation.mutateAsync(examples);
-        return {
-          tone: result.tone || '',
-          characteristics: result.characteristics || [],
-        };
-      } catch {
-        return null;
-      }
+      // Style analysis feature removed
+      return null;
     },
-    [analyzeStyleMutation]
+    []
   );
 
-  // Create template from examples (analyze + create)
+  // Create template from examples - feature removed, returns null
   const createTemplateFromExamples = useCallback(
     async (
-      platform: Platform,
-      name: string,
-      examples: string[]
+      _platform: Platform,
+      _name: string,
+      _examples: string[]
     ): Promise<StyleTemplate | null> => {
-      const analysis = await analyzeExamples(examples);
-      if (!analysis) return null;
-
-      return addTemplate({
-        platform,
-        name,
-        examples,
-        tone: analysis.tone,
-        characteristics: analysis.characteristics,
-      });
+      // Style analysis feature removed
+      return null;
     },
-    [analyzeExamples, addTemplate]
+    []
   );
 
   // Refresh templates (no-op with Zustand - state is always fresh)

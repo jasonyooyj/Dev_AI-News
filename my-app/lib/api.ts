@@ -470,7 +470,6 @@ export { ApiError };
 export type {
   SummarizeResponse,
   GenerateResponse,
-  AnalyzeStyleResponse,
   RssItem,
   RssResponse,
   ScrapeResponse,
