@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { NewsItem, Platform, StyleTemplate } from '@/types/news';
+import { NewsItem, Platform } from '@/types/news';
 import { useNewsStore } from '@/store';
 import { useSummarize, useGenerateContent, useRegenerateContent } from './queries';
 
@@ -52,12 +52,12 @@ export function useAI() {
     [summarizeMutation]
   );
 
-  // Generate platform-specific content (with style template)
+  // Generate platform-specific content
   const generatePlatformContent = useCallback(
     async (
       newsItem: NewsItem,
       platform: Platform,
-      styleTemplate?: StyleTemplate | null
+      sourceName?: string
     ) => {
       try {
         const result = await generateMutation.mutateAsync({
@@ -65,7 +65,7 @@ export function useAI() {
           content: newsItem.originalContent,
           platform,
           url: newsItem.url,
-          styleTemplate: styleTemplate || undefined,
+          sourceName,
         });
         return {
           content: result.content,

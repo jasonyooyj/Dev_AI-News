@@ -160,34 +160,34 @@ export async function generatePlatformContent(
   title: string,
   content: string,
   platform: string,
-  styleTemplate?: {
-    tone?: string;
-    characteristics?: string[];
-    examples?: string[];
-  },
-  url?: string
+  url?: string,
+  sourceName?: string
 ): Promise<PlatformContentResult> {
   const ai = getGeminiClient();
 
   const platformConfigs: Record<
     string,
-    { maxLength: number; description: string }
+    { maxLength: number; description: string; style: string }
   > = {
     twitter: {
       maxLength: 280,
-      description: "X(트위터) - 짧고 임팩트있게, 해시태그 1-2개",
+      description: "X(트위터)",
+      style: "핵심만 간결하게. 해시태그 1-2개.",
     },
     threads: {
       maxLength: 500,
-      description: "Threads - 캐주얼하면서 정보성있게",
+      description: "Threads",
+      style: "정보 중심으로 깔끔하게 정리.",
     },
     instagram: {
       maxLength: 2200,
-      description: "Instagram - 이모지 활용, 해시태그 5-10개",
+      description: "Instagram",
+      style: "읽기 쉽게 정리. 해시태그는 맨 마지막에.",
     },
     linkedin: {
       maxLength: 3000,
-      description: "LinkedIn - 전문적이고 인사이트있게",
+      description: "LinkedIn",
+      style: "전문적이고 깔끔하게. 인사이트 포함.",
     },
   };
 
@@ -196,34 +196,30 @@ export async function generatePlatformContent(
     throw new Error(`Invalid platform: ${platform}`);
   }
 
-  // 문체 템플릿 프롬프트 구성
-  let stylePrompt = "";
-  if (styleTemplate) {
-    if (styleTemplate.tone) {
-      stylePrompt += `\n\n문체 톤: ${styleTemplate.tone}`;
-    }
-    if (styleTemplate.characteristics?.length) {
-      stylePrompt += `\n스타일 특성: ${styleTemplate.characteristics.join(", ")}`;
-    }
-    if (styleTemplate.examples?.length) {
-      stylePrompt += `\n\n참고할 예시 글:\n${styleTemplate.examples.map((e, i) => `${i + 1}. ${e}`).join("\n")}`;
-    }
-  }
+  const systemPrompt = `테크 뉴스를 소셜 미디어용으로 정리합니다.
 
-  const systemPrompt = `당신은 소셜 미디어 콘텐츠 작성 전문가입니다. 주어진 뉴스를 ${config.description}에 맞게 한국어로 작성합니다.${stylePrompt} 반드시 유효한 JSON 형식으로만 응답하세요.`;
+## 작성 스타일
+- 정보 전달 중심, 군더더기 없이
+- 이모지는 필요할때 포인트에만 적절히
+${sourceName ? `- 마지막에 "출처: ${sourceName}" 추가` : ""}
 
-  const userPrompt = `다음 뉴스를 ${platform} 포스트로 작성해주세요:
+## 규칙
+1. 팩트 중심 (숫자, 이름, 사실관계 정확히)
+2. ${Math.floor(config.maxLength * 0.5)}~${Math.floor(config.maxLength * 0.8)}자
+3. 고유명사 원문 유지
+4. ${config.style}
+
+JSON으로만 응답.`;
+
+  const userPrompt = `이 뉴스를 ${config.description} 포스트로 바꿔줘:
 
 제목: ${title}
 내용: ${content}
-${url ? `원문 링크: ${url}` : ""}
+${url ? `링크: ${url}` : ""}
 
-글자수 제한: ${config.maxLength}자
-
-다음 JSON 형식으로 응답해주세요:
 {
   "content": "포스트 내용",
-  "charCount": 글자수${platform === "instagram" ? ',\n  "hashtags": ["해시태그", "배열"]' : ""}
+  "charCount": 글자수${platform === "instagram" ? ',\n  "hashtags": ["해시태그들"]' : ""}
 }`;
 
   const response = await ai.models.generateContent({
@@ -247,55 +243,6 @@ ${url ? `원문 링크: ${url}` : ""}
   return result;
 }
 
-// 문체 분석
-export interface StyleAnalysisResult {
-  tone: string;
-  characteristics: string[];
-}
-
-export async function analyzeStyle(
-  examples: string[]
-): Promise<StyleAnalysisResult> {
-  const ai = getGeminiClient();
-
-  const systemPrompt = `당신은 문체 분석 전문가입니다. 주어진 예시 텍스트들의 공통된 문체 특성을 분석합니다. 반드시 유효한 JSON 형식으로만 응답하세요.`;
-
-  const userPrompt = `다음 예시 텍스트들의 문체를 분석해주세요:
-
-${examples.map((e, i) => `예시 ${i + 1}:\n${e}`).join("\n\n")}
-
-다음 JSON 형식으로 응답해주세요:
-{
-  "tone": "문체의 전반적인 톤을 한 문장으로 설명 (예: 전문적이면서 친근한 톤, 간결하고 임팩트있는 스타일)",
-  "characteristics": [
-    "특성1 (예: 이모지 자주 사용)",
-    "특성2 (예: 질문으로 시작)",
-    "특성3 (예: 해시태그 많이 활용)",
-    "특성4"
-  ]
-}`;
-
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: `${systemPrompt}\n\n---\n\n${userPrompt}`,
-    config: {
-      temperature: 0.5,
-    },
-  });
-
-  const result = extractJSON(response.text || "{}") as StyleAnalysisResult;
-
-  // 기본값 설정
-  if (!result.tone) {
-    result.tone = "분석 결과를 도출할 수 없습니다.";
-  }
-  if (!result.characteristics) {
-    result.characteristics = [];
-  }
-
-  return result;
-}
-
 // 콘텐츠 재생성
 export async function regenerateContent(
   previousContent: string,
@@ -312,21 +259,23 @@ export async function regenerateContent(
   };
 
   const config = platformConfigs[platform];
+  const maxLength = config?.maxLength || 500;
 
-  const systemPrompt = `당신은 소셜 미디어 콘텐츠 작성 전문가입니다. 피드백을 반영하여 콘텐츠를 개선합니다. 반드시 유효한 JSON 형식으로만 응답하세요.`;
+  const systemPrompt = `피드백 반영해서 콘텐츠 수정해줘.
 
-  const userPrompt = `다음 콘텐츠를 피드백에 맞게 수정해주세요:
+## 스타일
+- 2-3문장을 한 문단으로, 문단 사이 줄바꿈
+- 이모지는 문장 중간중간에 자연스럽게 (끝에만 몰아넣지 말 것)
 
-원본 콘텐츠:
+글자수 ${Math.floor(maxLength * 0.5)}~${Math.floor(maxLength * 0.8)}자. JSON으로만 응답.`;
+
+  const userPrompt = `원본:
 ${previousContent}
 
 피드백: ${feedback}
 
-글자수 제한: ${config?.maxLength || 500}자
-
-다음 JSON 형식으로 응답해주세요:
 {
-  "content": "수정된 포스트 내용",
+  "content": "수정된 내용",
   "charCount": 글자수
 }`;
 
@@ -521,7 +470,7 @@ Text requirements:
 - Bold Pretendard font (Korean sans-serif)
 - White color with subtle shadow for contrast
 - Positioned in upper 1/3, CENTER-ALIGNED horizontally
-- Large enough to read on mobile
+- Medium font size (not too large, elegant and balanced)
 
 Technical specifications:
 - DSLR quality, 50mm lens, f/2.8 depth of field

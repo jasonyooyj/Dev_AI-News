@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   summarizeNews,
   generatePlatformContent,
-  analyzeStyle,
   regenerateContent,
   translateContent,
 } from "@/lib/gemini";
@@ -10,7 +9,6 @@ import {
 type Mode =
   | "summarize"
   | "generate"
-  | "analyze-style"
   | "regenerate"
   | "translate";
 
@@ -21,14 +19,8 @@ interface RequestBody {
   content?: string;
   // generate
   platform?: string;
-  styleTemplate?: {
-    tone?: string;
-    characteristics?: string[];
-    examples?: string[];
-  };
   url?: string;
-  // analyze-style
-  examples?: string[];
+  sourceName?: string;
   // regenerate
   previousContent?: string;
   feedback?: string;
@@ -72,9 +64,9 @@ export async function POST(request: NextRequest) {
     }
 
     // === MODE: generate ===
-    // 특정 플랫폼용 콘텐츠 생성 (문체 템플릿 적용)
+    // 특정 플랫폼용 콘텐츠 생성
     if (mode === "generate") {
-      const { title, content, platform, styleTemplate, url } = body;
+      const { title, content, platform, url, sourceName } = body;
 
       if (!title || !content || !platform) {
         return NextResponse.json(
@@ -92,25 +84,9 @@ export async function POST(request: NextRequest) {
         title,
         content,
         platform,
-        styleTemplate,
-        url
+        url,
+        sourceName
       );
-      return NextResponse.json(result);
-    }
-
-    // === MODE: analyze-style ===
-    // 예시 텍스트에서 문체 분석
-    if (mode === "analyze-style") {
-      const { examples } = body;
-
-      if (!examples || examples.length === 0) {
-        return NextResponse.json(
-          { error: "Examples are required for analyze-style mode" },
-          { status: 400 }
-        );
-      }
-
-      const result = await analyzeStyle(examples);
       return NextResponse.json(result);
     }
 

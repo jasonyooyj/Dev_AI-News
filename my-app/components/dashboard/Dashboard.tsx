@@ -11,7 +11,6 @@ import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useSources } from '@/hooks/useSources';
 import { useNews } from '@/hooks/useNews';
 import { useAI } from '@/hooks/useAI';
-import { useStyleTemplates } from '@/hooks/useStyleTemplates';
 import { useNewsStore } from '@/store';
 import { NewsItem, Source, Platform, PlatformContent } from '@/types/news';
 
@@ -34,7 +33,6 @@ export function Dashboard() {
   const { sources, isLoading: sourcesLoading } = useSources();
   const { newsItems, isLoading: newsLoading, fetchFromRss, deleteNewsItem, toggleBookmark, refreshNews, addNewsItem } = useNews();
   const { generatePlatformContent, regenerateWithFeedback } = useAI();
-  const { templates: styleTemplates } = useStyleTemplates();
   const saveGeneratedContent = useNewsStore((s) => s.saveGeneratedContent);
 
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
@@ -64,18 +62,17 @@ export function Dashboard() {
   };
 
   const handleGenerateContent = async (
-    platform: Platform,
-    styleTemplateId?: string
+    platform: Platform
   ): Promise<PlatformContent | null> => {
     if (!selectedNews) return null;
 
     setIsGeneratingContent(true);
     try {
-      const styleTemplate = styleTemplateId
-        ? styleTemplates.find((t) => t.id === styleTemplateId)
-        : undefined;
+      // Get source name for attribution
+      const source = sources.find((s) => s.id === selectedNews.sourceId);
+      const sourceName = source?.name;
 
-      const result = await generatePlatformContent(selectedNews, platform, styleTemplate);
+      const result = await generatePlatformContent(selectedNews, platform, sourceName);
       if (result) {
         // Update local state
         setGeneratedContents((prev) => ({
@@ -319,7 +316,6 @@ export function Dashboard() {
           onGenerateContent={handleGenerateContent}
           onRegenerateWithFeedback={handleRegenerateWithFeedback}
           onBookmark={handleBookmarkNews}
-          styleTemplates={styleTemplates}
           isGenerating={isGeneratingContent}
           generatedContents={generatedContents}
         />

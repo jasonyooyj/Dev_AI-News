@@ -4,13 +4,10 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { StyleTemplate, Platform } from '@/types/news';
 import { useStyleTemplatesStore } from '@/store';
-import { useAnalyzeStyle } from './queries';
 
 /**
- * useStyleTemplates - Migrated to use Zustand store + TanStack Query
- *
- * State is auto-persisted to localStorage via Zustand persist middleware
- * AI analysis uses TanStack Query mutations
+ * useStyleTemplates - Zustand store wrapper
+ * (Style analysis feature removed)
  */
 export function useStyleTemplates() {
   // Zustand store state and actions
@@ -19,15 +16,10 @@ export function useStyleTemplates() {
   const updateTemplateInStore = useStyleTemplatesStore((s) => s.updateTemplate);
   const deleteTemplateFromStore = useStyleTemplatesStore((s) => s.deleteTemplate);
   const setDefaultInStore = useStyleTemplatesStore((s) => s.setDefault);
-  const getByPlatformFromStore = useStyleTemplatesStore((s) => s.getByPlatform);
-  const getDefaultFromStore = useStyleTemplatesStore((s) => s.getDefault);
 
-  // TanStack Query mutation for style analysis
-  const analyzeStyleMutation = useAnalyzeStyle();
-
-  // Loading states - Zustand hydrates synchronously
+  // Loading states
   const isLoading = false;
-  const isAnalyzing = analyzeStyleMutation.isPending;
+  const isAnalyzing = false;
 
   // Get templates by platform
   const getByPlatform = useCallback(

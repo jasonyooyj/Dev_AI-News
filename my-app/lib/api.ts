@@ -1,4 +1,4 @@
-import { Platform, StyleTemplate, SocialPlatform } from '@/types/news';
+import { Platform, SocialPlatform } from '@/types/news';
 
 // API Response types
 interface SummarizeResponse {
@@ -10,11 +10,6 @@ interface GenerateResponse {
   content: string;
   charCount: number;
   hashtags?: string[];
-}
-
-interface AnalyzeStyleResponse {
-  tone: string;
-  characteristics: string[];
 }
 
 interface RssItem {
@@ -274,7 +269,7 @@ export const api = {
       platform: Platform,
       options?: {
         url?: string;
-        styleTemplate?: Pick<StyleTemplate, 'tone' | 'characteristics' | 'examples'>;
+        sourceName?: string;
       }
     ): Promise<GenerateResponse> => {
       const response = await fetch('/api/ai', {
@@ -289,15 +284,6 @@ export const api = {
         }),
       });
       return handleResponse<GenerateResponse>(response);
-    },
-
-    analyzeStyle: async (examples: string[]): Promise<AnalyzeStyleResponse> => {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'analyze-style', examples }),
-      });
-      return handleResponse<AnalyzeStyleResponse>(response);
     },
 
     regenerate: async (

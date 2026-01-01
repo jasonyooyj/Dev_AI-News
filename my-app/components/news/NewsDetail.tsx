@@ -9,8 +9,6 @@ import {
   FileText,
   Wand2,
   ListChecks,
-  ChevronDown,
-  Check,
   Bookmark,
   ImageIcon,
 } from 'lucide-react';
@@ -31,10 +29,8 @@ import {
   Source,
   Platform,
   PlatformContent,
-  StyleTemplate,
   QuickSummary,
   NewsCategory,
-  GeneratedImage,
   NEWS_CATEGORY_LABELS,
   PLATFORM_CONFIGS,
 } from '@/types/news';
@@ -98,10 +94,9 @@ interface NewsDetailProps {
   onClose: () => void;
   news: NewsItem | null;
   source?: Source;
-  onGenerateContent: (platform: Platform, styleTemplateId?: string) => Promise<PlatformContent | null>;
+  onGenerateContent: (platform: Platform) => Promise<PlatformContent | null>;
   onRegenerateWithFeedback: (platform: Platform, feedback: string) => Promise<PlatformContent | null>;
   onBookmark?: (news: NewsItem) => void;
-  styleTemplates: StyleTemplate[];
   isGenerating: boolean;
   generatedContents: Partial<Record<Platform, PlatformContent>>;
 }
@@ -155,91 +150,6 @@ function Tab({ id, label, icon, isActive, onClick }: TabProps) {
   );
 }
 
-// Style Template Dropdown component
-interface StyleTemplateDropdownProps {
-  platform: Platform;
-  templates: StyleTemplate[];
-  selectedTemplateId: string | undefined;
-  onSelect: (templateId: string | undefined) => void;
-}
-
-function StyleTemplateDropdown({
-  platform,
-  templates,
-  selectedTemplateId,
-  onSelect,
-}: StyleTemplateDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const platformTemplates = templates.filter((t) => t.platform === platform);
-  const selectedTemplate = platformTemplates.find((t) => t.id === selectedTemplateId);
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full px-3 py-2 text-sm bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
-      >
-        <span className="text-zinc-700 dark:text-zinc-300">
-          {selectedTemplate ? selectedTemplate.name : 'Default Style'}
-        </span>
-        <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      {isOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="absolute z-20 mt-1 w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg overflow-hidden">
-            <button
-              onClick={() => {
-                onSelect(undefined);
-                setIsOpen(false);
-              }}
-              className={`
-                flex items-center justify-between w-full px-3 py-2 text-sm text-left hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors
-                ${!selectedTemplateId ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'text-zinc-700 dark:text-zinc-300'}
-              `}
-            >
-              <span>Default Style</span>
-              {!selectedTemplateId && <Check className="w-4 h-4" />}
-            </button>
-            {platformTemplates.map((template) => (
-              <button
-                key={template.id}
-                onClick={() => {
-                  onSelect(template.id);
-                  setIsOpen(false);
-                }}
-                className={`
-                  flex items-center justify-between w-full px-3 py-2 text-sm text-left hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors
-                  ${selectedTemplateId === template.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'text-zinc-700 dark:text-zinc-300'}
-                `}
-              >
-                <div>
-                  <span className="block">{template.name}</span>
-                  {template.tone && (
-                    <span className="block text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      {template.tone}
-                    </span>
-                  )}
-                </div>
-                {selectedTemplateId === template.id && <Check className="w-4 h-4 flex-shrink-0" />}
-              </button>
-            ))}
-            {platformTemplates.length === 0 && (
-              <div className="px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400 italic">
-                No custom templates yet
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 // Summary Tab Content
 function SummaryTabContent({ quickSummary }: { quickSummary?: QuickSummary }) {
@@ -476,9 +386,6 @@ function GenerateContentTabContent({
   platforms,
   selectedPlatform,
   onSelectPlatform,
-  styleTemplates,
-  selectedTemplateIds,
-  onSelectTemplate,
   onGenerate,
   isGenerating,
   generatedContent,
@@ -498,9 +405,6 @@ function GenerateContentTabContent({
   platforms: Platform[];
   selectedPlatform: Platform;
   onSelectPlatform: (platform: Platform) => void;
-  styleTemplates: StyleTemplate[];
-  selectedTemplateIds: Partial<Record<Platform, string>>;
-  onSelectTemplate: (platform: Platform, templateId: string | undefined) => void;
   onGenerate: () => void;
   isGenerating: boolean;
   generatedContent?: PlatformContent;
@@ -549,19 +453,6 @@ function GenerateContentTabContent({
             );
           })}
         </div>
-      </div>
-
-      {/* Style Template Selector */}
-      <div>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-          Writing Style
-        </label>
-        <StyleTemplateDropdown
-          platform={selectedPlatform}
-          templates={styleTemplates}
-          selectedTemplateId={selectedTemplateIds[selectedPlatform]}
-          onSelect={(templateId) => onSelectTemplate(selectedPlatform, templateId)}
-        />
       </div>
 
       {/* Generate Button */}
@@ -669,13 +560,11 @@ export function NewsDetail({
   onGenerateContent,
   onRegenerateWithFeedback,
   onBookmark,
-  styleTemplates,
   isGenerating,
   generatedContents,
 }: NewsDetailProps) {
   const [activeTab, setActiveTab] = useState<TabType>('summary');
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('twitter');
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Partial<Record<Platform, string>>>({});
   const [isBlueskyModalOpen, setIsBlueskyModalOpen] = useState(false);
   const [isThreadsModalOpen, setIsThreadsModalOpen] = useState(false);
   const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
@@ -707,19 +596,11 @@ export function NewsDetail({
   };
 
   const handleGenerate = async () => {
-    const templateId = selectedTemplateIds[selectedPlatform];
-    await onGenerateContent(selectedPlatform, templateId);
+    await onGenerateContent(selectedPlatform);
   };
 
   const handleRegenerateWithFeedback = async (feedback: string) => {
     await onRegenerateWithFeedback(selectedPlatform, feedback);
-  };
-
-  const handleSelectTemplate = (platform: Platform, templateId: string | undefined) => {
-    setSelectedTemplateIds((prev) => ({
-      ...prev,
-      [platform]: templateId,
-    }));
   };
 
   const handleThumbsUp = () => {
@@ -892,9 +773,6 @@ export function NewsDetail({
             platforms={platforms}
             selectedPlatform={selectedPlatform}
             onSelectPlatform={setSelectedPlatform}
-            styleTemplates={styleTemplates}
-            selectedTemplateIds={selectedTemplateIds}
-            onSelectTemplate={handleSelectTemplate}
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
             generatedContent={generatedContents[selectedPlatform]}

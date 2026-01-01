@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import { useNewsStore, useSourcesStore } from '@/store';
-import { Platform, StyleTemplate, Source } from '@/types/news';
+import { Platform, Source } from '@/types/news';
 
 // ============ AI Mutations ============
 export function useSummarize() {
@@ -36,24 +36,15 @@ export function useGenerateContent() {
       content,
       platform,
       url,
-      styleTemplate,
+      sourceName,
     }: {
       title: string;
       content: string;
       platform: Platform;
       url?: string;
-      styleTemplate?: StyleTemplate;
+      sourceName?: string;
     }) => {
-      return api.ai.generate(title, content, platform, {
-        url,
-        styleTemplate: styleTemplate
-          ? {
-              tone: styleTemplate.tone,
-              characteristics: styleTemplate.characteristics,
-              examples: styleTemplate.examples,
-            }
-          : undefined,
-      });
+      return api.ai.generate(title, content, platform, { url, sourceName });
     },
     onSuccess: () => {
       toast.success('Content generated');
@@ -82,20 +73,6 @@ export function useRegenerateContent() {
     },
     onError: (error: ApiError) => {
       toast.error(`Failed to regenerate: ${error.message}`);
-    },
-  });
-}
-
-export function useAnalyzeStyle() {
-  return useMutation({
-    mutationFn: async (examples: string[]) => {
-      return api.ai.analyzeStyle(examples);
-    },
-    onSuccess: () => {
-      toast.success('Style analyzed');
-    },
-    onError: (error: ApiError) => {
-      toast.error(`Failed to analyze style: ${error.message}`);
     },
   });
 }
