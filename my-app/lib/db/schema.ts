@@ -46,6 +46,7 @@ export const users = pgTable('users', {
   photoUrl: text('photo_url'),
   theme: themeEnum('theme').default('system'),
   autoSummarize: boolean('auto_summarize').default(true),
+  lastReadAt: timestamp('last_read_at'), // 마지막으로 뉴스 피드를 확인한 시점
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

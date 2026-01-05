@@ -142,6 +142,15 @@ export const DEFAULT_SOURCES: Source[] = [
     priority: 'medium',
     type: 'rss',
   },
+  {
+    id: uuidv4(),
+    name: 'choi.openai',
+    description: 'OpenAI 관련 AI 소식 Threads 계정',
+    websiteUrl: 'https://www.threads.net/@choi.openai',
+    isActive: true,
+    priority: 'high',
+    type: 'threads',
+  },
 ];
 
 export const STORAGE_KEYS = {

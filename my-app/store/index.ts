@@ -630,16 +630,51 @@ interface UIState {
   selectedNewsId: string | null;
   activeTab: 'news' | 'collect';
   isModalOpen: boolean;
+  lastReadAt: string | null;
+  isLoadingLastRead: boolean;
   setSelectedNewsId: (id: string | null) => void;
   setActiveTab: (tab: 'news' | 'collect') => void;
   setModalOpen: (open: boolean) => void;
+  fetchLastReadAt: () => Promise<void>;
+  markAllAsRead: () => Promise<void>;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
   selectedNewsId: null,
   activeTab: 'news',
   isModalOpen: false,
+  lastReadAt: null,
+  isLoadingLastRead: false,
   setSelectedNewsId: (id) => set({ selectedNewsId: id }),
   setActiveTab: (tab) => set({ activeTab: tab }),
   setModalOpen: (open) => set({ isModalOpen: open }),
+
+  fetchLastReadAt: async () => {
+    if (get().isLoadingLastRead) return;
+    set({ isLoadingLastRead: true });
+
+    try {
+      const response = await fetch('/api/user/last-read');
+      if (response.ok) {
+        const data = await response.json();
+        set({ lastReadAt: data.lastReadAt });
+      }
+    } catch (error) {
+      console.error('Error fetching lastReadAt:', error);
+    } finally {
+      set({ isLoadingLastRead: false });
+    }
+  },
+
+  markAllAsRead: async () => {
+    try {
+      const response = await fetch('/api/user/last-read', { method: 'POST' });
+      if (response.ok) {
+        const data = await response.json();
+        set({ lastReadAt: data.lastReadAt });
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  },
 }));

@@ -68,6 +68,24 @@ export async function updateUserSettings(
   return updated;
 }
 
+export async function getLastReadAt(userId: string): Promise<Date | null> {
+  const [user] = await db
+    .select({ lastReadAt: users.lastReadAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return user?.lastReadAt ?? null;
+}
+
+export async function updateLastReadAt(userId: string): Promise<Date> {
+  const now = new Date();
+  await db
+    .update(users)
+    .set({ lastReadAt: now, updatedAt: now })
+    .where(eq(users.id, userId));
+  return now;
+}
+
 // ============ Source Queries ============
 
 export async function getSourcesByUserId(userId: string): Promise<Source[]> {

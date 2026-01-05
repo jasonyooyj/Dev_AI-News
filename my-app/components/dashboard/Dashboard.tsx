@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { NewsList } from '@/components/news/NewsList';
 import { NewsDetail } from '@/components/news/NewsDetail';
@@ -11,7 +11,7 @@ import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useSources } from '@/hooks/useSources';
 import { useNews } from '@/hooks/useNews';
 import { useAI } from '@/hooks/useAI';
-import { useNewsStore } from '@/store';
+import { useNewsStore, useUIStore } from '@/store';
 import { NewsItem, Source, Platform, PlatformContent } from '@/types/news';
 
 interface FetchResult {
@@ -34,6 +34,12 @@ export function Dashboard() {
   const { newsItems, isLoading: newsLoading, fetchFromRss, deleteNewsItem, toggleBookmark, refreshNews, addNewsItem } = useNews();
   const { generatePlatformContent, regenerateWithFeedback } = useAI();
   const saveGeneratedContent = useNewsStore((s) => s.saveGeneratedContent);
+  const { lastReadAt, fetchLastReadAt, markAllAsRead } = useUIStore();
+
+  // Fetch lastReadAt on mount
+  useEffect(() => {
+    fetchLastReadAt();
+  }, [fetchLastReadAt]);
 
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   // Get the actual news item from store (stays in sync with updates)
@@ -140,8 +146,12 @@ export function Dashboard() {
     setGeneratedContents({});
   };
 
-  const handleFetchSource = useCallback(async (source: Source): Promise<FetchResult> => {
+  const handleFetchSource = useCallback(async (source: Source, skipMarkAsRead = false): Promise<FetchResult> => {
     try {
+      // fetch 전에 lastReadAt 업데이트 (새 뉴스와 기존 뉴스 사이에 마커 표시)
+      if (!skipMarkAsRead) {
+        await markAllAsRead();
+      }
       const items = await fetchFromRss(source);
       return {
         sourceId: source.id,
@@ -157,22 +167,26 @@ export function Dashboard() {
         error: error instanceof Error ? error.message : 'Failed to fetch',
       };
     }
-  }, [fetchFromRss]);
+  }, [fetchFromRss, markAllAsRead]);
 
   const handleFetchAll = useCallback(async (): Promise<FetchResult[]> => {
     // Include sources with rssUrl OR supported types (youtube, threads)
     const fetchableSources = activeSources.filter((s) =>
       s.rssUrl || s.type === 'youtube' || s.type === 'threads'
     );
-    const results: FetchResult[] = [];
 
+    // fetch 전에 한 번만 markAllAsRead 호출 (새 뉴스와 기존 뉴스 사이에 마커 표시)
+    await markAllAsRead();
+
+    const results: FetchResult[] = [];
     for (const source of fetchableSources) {
-      const result = await handleFetchSource(source);
+      // skipMarkAsRead = true로 전달하여 개별 호출 시 중복 호출 방지
+      const result = await handleFetchSource(source, true);
       results.push(result);
     }
 
     return results;
-  }, [activeSources, handleFetchSource]);
+  }, [activeSources, handleFetchSource, markAllAsRead]);
 
   const handleRefreshSources = useCallback(async () => {
     setIsRefreshingSources(true);
@@ -296,6 +310,8 @@ export function Dashboard() {
             onDelete={handleDeleteNews}
             onBookmark={handleBookmarkNews}
             summarizingIds={summarizingIds}
+            lastReadAt={lastReadAt}
+            onMarkAllAsRead={markAllAsRead}
           />
         ) : (
           <ContentFetcher

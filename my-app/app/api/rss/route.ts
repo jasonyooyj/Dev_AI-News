@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       title: feed.title,
       description: feed.description,
-      items: feed.items.slice(0, 20).map((item) => {
+      items: feed.items.slice(0, 10).map((item) => {
         // Try multiple content sources
         const rawContent =
           item['content:encoded'] ||

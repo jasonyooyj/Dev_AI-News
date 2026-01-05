@@ -14,6 +14,8 @@ import {
   ChevronsRight,
   Newspaper,
   Bookmark,
+  CheckCheck,
+  Eye,
 } from 'lucide-react';
 import { NewsCard } from './NewsCard';
 import { Input } from '@/components/ui/Input';
@@ -68,6 +70,8 @@ interface NewsListProps {
   onDelete?: (news: NewsItem) => void;
   onBookmark?: (news: NewsItem) => void;
   summarizingIds?: string[];
+  lastReadAt?: string | null;
+  onMarkAllAsRead?: () => void;
 }
 
 export function NewsList({
@@ -78,6 +82,8 @@ export function NewsList({
   onDelete,
   onBookmark,
   summarizingIds = [],
+  lastReadAt,
+  onMarkAllAsRead,
 }: NewsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -85,7 +91,7 @@ export function NewsList({
   const [filterSourceId, setFilterSourceId] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 99;
+  const itemsPerPage = 33;
 
   const sourceMap = useMemo(() => {
     return sources.reduce(
@@ -137,6 +143,28 @@ export function NewsList({
       bookmarked,
     };
   }, [news]);
+
+  // "여기까지 읽음" 마커 위치 계산
+  const { unreadCount, lastReadMarkerIndex } = useMemo(() => {
+    if (!lastReadAt) {
+      return { unreadCount: 0, lastReadMarkerIndex: -1 };
+    }
+
+    const lastReadTime = new Date(lastReadAt).getTime();
+    let markerIndex = -1;
+
+    // 최신순으로 정렬된 뉴스에서 lastReadAt보다 나중에 생성된 뉴스 개수 찾기
+    for (let i = 0; i < filteredNews.length; i++) {
+      const newsTime = new Date(filteredNews[i].publishedAt || filteredNews[i].createdAt).getTime();
+      if (newsTime <= lastReadTime) {
+        markerIndex = i;
+        break;
+      }
+    }
+
+    const unread = markerIndex === -1 ? filteredNews.length : markerIndex;
+    return { unreadCount: unread, lastReadMarkerIndex: markerIndex };
+  }, [filteredNews, lastReadAt]);
 
   // Pagination
   const totalPages = Math.ceil(filteredNews.length / itemsPerPage);
@@ -295,8 +323,25 @@ export function NewsList({
                 {stats.bookmarked} bookmarked
               </Badge>
             )}
+            {unreadCount > 0 && (
+              <Badge variant="default" size="sm" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                <Eye className="w-3 h-3 mr-1" />
+                {unreadCount} new
+              </Badge>
+            )}
           </div>
         </div>
+        {unreadCount > 0 && onMarkAllAsRead && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onMarkAllAsRead}
+            leftIcon={<CheckCheck className="w-4 h-4" />}
+            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Mark all as read
+          </Button>
+        )}
       </div>
 
       {/* News Grid/List */}
@@ -330,22 +375,55 @@ export function NewsList({
             }
           >
             <AnimatePresence mode="popLayout">
-              {paginatedNews.map((item) => (
-                <motion.div
-                  key={item.id}
-                  variants={cardVariants}
-                  layout
-                >
-                  <NewsCard
-                    news={item}
-                    source={sourceMap[item.sourceId]}
-                    onView={onView}
-                    onDelete={onDelete}
-                    onBookmark={onBookmark}
-                    isSummarizing={summarizingIds.includes(item.id)}
-                  />
-                </motion.div>
-              ))}
+              {paginatedNews.map((item, index) => {
+                // 현재 페이지에서의 실제 인덱스 계산
+                const globalIndex = (currentPage - 1) * itemsPerPage + index;
+                // 마커가 이 아이템 바로 앞에 와야 하는지 확인
+                const showMarkerBefore = lastReadMarkerIndex > 0 && globalIndex === lastReadMarkerIndex;
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    variants={cardVariants}
+                    layout
+                    className={viewMode === 'grid' ? '' : 'contents'}
+                  >
+                    {/* "여기까지 읽음" 마커 라인 */}
+                    {showMarkerBefore && viewMode === 'list' && (
+                      <div className="col-span-full flex items-center gap-3 py-3 my-1">
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent dark:via-blue-500" />
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-full border border-blue-200 dark:border-blue-800">
+                          <Eye className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                            Read up to here
+                          </span>
+                        </div>
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent dark:via-blue-500" />
+                      </div>
+                    )}
+                    {showMarkerBefore && viewMode === 'grid' && (
+                      <div className="col-span-full flex items-center gap-3 py-3 my-1">
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent dark:via-blue-500" />
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-full border border-blue-200 dark:border-blue-800">
+                          <Eye className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                            Read up to here
+                          </span>
+                        </div>
+                        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent dark:via-blue-500" />
+                      </div>
+                    )}
+                    <NewsCard
+                      news={item}
+                      source={sourceMap[item.sourceId]}
+                      onView={onView}
+                      onDelete={onDelete}
+                      onBookmark={onBookmark}
+                      isSummarizing={summarizingIds.includes(item.id)}
+                    />
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </motion.div>
 

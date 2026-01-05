@@ -309,7 +309,7 @@ class ThreadsClient {
   /**
    * Get user's threads
    */
-  async getThreads(limit = 25): Promise<Array<{
+  async getThreads(limit = 20): Promise<Array<{
     id: string;
     text?: string;
     timestamp: string;

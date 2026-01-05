@@ -208,6 +208,35 @@ function SummaryTabContent({ quickSummary }: { quickSummary?: QuickSummary }) {
   );
 }
 
+// Helper function to detect if content is primarily Korean
+function isKoreanContent(text: string): boolean {
+  // Count Korean characters (Hangul)
+  const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/g;
+  const koreanChars = text.match(koreanRegex) || [];
+  // Count all non-whitespace characters
+  const allChars = text.replace(/\s/g, '').length;
+  if (allChars === 0) return false;
+  // If more than 30% of characters are Korean, consider it Korean content
+  const koreanRatio = koreanChars.length / allChars;
+  return koreanRatio > 0.3;
+}
+
+// Simple markdown formatter for Korean content (no AI needed)
+function formatKoreanContent(rawContent: string): string {
+  // Basic cleanup and formatting
+  let formatted = rawContent
+    // Normalize whitespace
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    // Ensure proper paragraph breaks
+    .split('\n\n')
+    .map(paragraph => paragraph.trim())
+    .filter(p => p.length > 0)
+    .join('\n\n');
+
+  return formatted;
+}
+
 // Full Article Tab Content - uses store for persistent caching
 function FullArticleTabContent({
   url,
@@ -222,7 +251,8 @@ function FullArticleTabContent({
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadingStep, setLoadingStep] = useState<'fetching' | 'translating'>('fetching');
+  const [loadingStep, setLoadingStep] = useState<'fetching' | 'translating' | 'formatting'>('fetching');
+  const [isOriginalKorean, setIsOriginalKorean] = useState(false);
   const hasFetchedRef = useRef(false);
 
   // Use saved translation if available
@@ -236,6 +266,7 @@ function FullArticleTabContent({
     setIsLoading(true);
     setError(null);
     setLoadingStep('fetching');
+    setIsOriginalKorean(false);
 
     try {
       // Step 1: Fetch the article
@@ -258,7 +289,17 @@ function FullArticleTabContent({
         return;
       }
 
-      // Step 2: Translate and format
+      // Check if content is already in Korean
+      if (isKoreanContent(rawContent)) {
+        // Skip AI translation, just format
+        setLoadingStep('formatting');
+        setIsOriginalKorean(true);
+        const formattedContent = formatKoreanContent(rawContent);
+        onSaveTranslation(formattedContent);
+        return;
+      }
+
+      // Step 2: Translate and format (only for non-Korean content)
       setLoadingStep('translating');
 
       const translateResponse = await fetch('/api/ai', {
@@ -308,11 +349,17 @@ function FullArticleTabContent({
         <Spinner size="lg" />
         <div className="text-center">
           <p className="font-medium text-zinc-900 dark:text-zinc-100">
-            {loadingStep === 'fetching' ? '기사 가져오는 중...' : '번역 및 포맷팅 중...'}
+            {loadingStep === 'fetching'
+              ? '기사 가져오는 중...'
+              : loadingStep === 'formatting'
+              ? '포맷팅 중...'
+              : '번역 및 포맷팅 중...'}
           </p>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             {loadingStep === 'fetching'
               ? '원문을 스크래핑하고 있습니다'
+              : loadingStep === 'formatting'
+              ? '한국어 원문을 정리하고 있습니다'
               : 'AI가 한국어로 번역하고 있습니다'}
           </p>
         </div>
@@ -344,12 +391,15 @@ function FullArticleTabContent({
     );
   }
 
+  // Detect if the saved content appears to be original Korean (not translated)
+  const contentIsOriginalKorean = savedTranslation && isKoreanContent(savedTranslation) && isOriginalKorean;
+
   return (
     <div className="space-y-3">
-      {/* Translated badge */}
+      {/* Badge - shows different label for original Korean vs translated */}
       <div className="flex items-center gap-2">
-        <Badge variant="info" size="sm">
-          한국어 번역
+        <Badge variant={contentIsOriginalKorean ? 'success' : 'info'} size="sm">
+          {contentIsOriginalKorean ? '한국어 원문' : '한국어 번역'}
         </Badge>
       </div>
 
@@ -373,9 +423,11 @@ function FullArticleTabContent({
           <ExternalLink className="w-4 h-4" />
           원문 보기
         </a>
-        <span className="text-xs text-zinc-400 dark:text-zinc-500">
-          AI 번역 · 원문과 다를 수 있습니다
-        </span>
+        {!contentIsOriginalKorean && (
+          <span className="text-xs text-zinc-400 dark:text-zinc-500">
+            AI 번역 · 원문과 다를 수 있습니다
+          </span>
+        )}
       </div>
     </div>
   );
