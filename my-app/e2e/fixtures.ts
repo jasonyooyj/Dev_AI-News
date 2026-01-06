@@ -1,20 +1,5 @@
 import { test as base, expect } from '@playwright/test';
-import type { Page, Route, BrowserContext } from '@playwright/test';
-import * as fs from 'fs';
-import * as path from 'path';
-
-/**
- * Test credentials - should match a real user in Firebase
- */
-const TEST_USER = {
-  email: 'admin@admin.com',
-  password: 'admin123',
-};
-
-/**
- * Path for storing authentication state
- */
-const AUTH_STATE_PATH = path.join(__dirname, '../playwright/.auth/user.json');
+import type { Page, Route } from '@playwright/test';
 
 /**
  * Mock response data for AI API (to avoid calling real DeepSeek API)
@@ -86,149 +71,17 @@ async function handleMockAPIResponse(route: Route) {
 }
 
 /**
- * Check if we have a valid saved auth state
- */
-function hasValidAuthState(): boolean {
-  try {
-    if (!fs.existsSync(AUTH_STATE_PATH)) return false;
-    const stats = fs.statSync(AUTH_STATE_PATH);
-    // Auth state is valid for 30 minutes
-    const thirtyMinutes = 30 * 60 * 1000;
-    return Date.now() - stats.mtimeMs < thirtyMinutes;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Save browser storage state for reuse
- */
-async function saveAuthState(context: BrowserContext): Promise<void> {
-  const dir = path.dirname(AUTH_STATE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  await context.storageState({ path: AUTH_STATE_PATH });
-  console.log('Auth state saved');
-}
-
-/**
- * Login helper function with retries
- */
-async function login(page: Page, context: BrowserContext, maxRetries = 3) {
-  // Enable console logging for debugging - capture all logs during test
-  page.on('console', msg => {
-    const text = msg.text();
-    if (msg.type() === 'error' ||
-        text.includes('Firebase') ||
-        text.includes('Firestore') ||
-        text.includes('subscription') ||
-        text.includes('loading')) {
-      console.log(`Browser [${msg.type()}]: ${text}`);
-    }
-  });
-
-  // Also log any page errors
-  page.on('pageerror', error => {
-    console.log(`Page error: ${error.message}`);
-  });
-
-  let lastError: Error | null = null;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`Login attempt ${attempt}/${maxRetries}`);
-
-      // Navigate to login page
-      await page.goto('/login');
-      await page.waitForLoadState('networkidle');
-
-      // Check if already logged in (redirected to /)
-      if (page.url().endsWith('/') || page.url().includes('localhost:3000/')) {
-        const isHome = await page.getByText('Total News').isVisible({ timeout: 5000 }).catch(() => false);
-        if (isHome) {
-          console.log('Already logged in');
-          await saveAuthState(context);
-          return;
-        }
-      }
-
-      // Wait for the login form to be visible
-      await page.locator('#email').waitFor({ state: 'visible', timeout: 10000 });
-
-      // Fill in credentials using input IDs
-      await page.locator('#email').fill(TEST_USER.email);
-      await page.locator('#password').fill(TEST_USER.password);
-
-      // Submit form
-      await page.getByRole('button', { name: 'Sign In' }).click();
-
-      // Wait for either:
-      // 1. Successful navigation to home page with content loaded
-      // 2. Error message on login form
-      await Promise.race([
-        page.waitForURL('/', { timeout: 30000 }),
-        page.waitForSelector('.text-red-600, .text-red-400', { timeout: 30000 })
-          .then(async () => {
-            const errorText = await page.locator('.text-red-600, .text-red-400').textContent();
-            throw new Error(`Login failed: ${errorText}`);
-          }),
-      ]);
-
-      console.log('Login succeeded, URL changed to /');
-
-      // Now wait for actual content to load (Firestore data)
-      // This might take longer as Firestore subscriptions need to fire
-      await page.waitForSelector(':is(:text("Total News"), :text("News Feed"))', { timeout: 60000 });
-      console.log('Home page content loaded');
-
-      // Handle migration dialog if it appears - click Skip
-      const skipButton = page.getByRole('button', { name: 'Skip' });
-      if (await skipButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await skipButton.click();
-        await page.waitForTimeout(500);
-      }
-
-      // Save auth state for future tests
-      await saveAuthState(context);
-      return;
-
-    } catch (e) {
-      lastError = e as Error;
-      console.log(`Login attempt ${attempt} failed: ${lastError.message}`);
-
-      if (attempt < maxRetries) {
-        // Clear cookies and storage before retry
-        try {
-          await context.clearCookies();
-          await page.evaluate(() => {
-            localStorage.clear();
-            sessionStorage.clear();
-          });
-        } catch {
-          // Context might be closed, ignore
-        }
-        await page.waitForTimeout(2000);
-      }
-    }
-  }
-
-  // All retries failed
-  await page.screenshot({ path: 'test-results/login-debug.png' }).catch(() => {});
-  throw lastError || new Error('Login failed after all retries');
-}
-
-/**
- * Extended test fixtures with real Firebase auth
+ * Extended test fixtures (no auth required - public access app)
  */
 export const test = base.extend<{
   authenticatedPage: Page;
   mockAPIs: void;
 }>({
   /**
-   * Provides an authenticated page (logs in before test)
+   * Provides a page ready for testing (navigates to home page)
+   * Note: This app uses public access with DEFAULT_USER_ID, no login required
    */
-  authenticatedPage: async ({ page, context }, use) => {
+  authenticatedPage: async ({ page }, use) => {
     // Mock AI APIs to avoid real API calls
     await page.route('**/api/ai', async (route) => {
       await handleMockAPIResponse(route);
@@ -267,8 +120,9 @@ export const test = base.extend<{
       });
     });
 
-    // Login with retry logic
-    await login(page, context);
+    // Navigate to home page (no login required - public access)
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
 
     await use(page);
   },

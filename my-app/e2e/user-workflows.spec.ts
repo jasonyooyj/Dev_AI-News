@@ -61,8 +61,12 @@ test.describe('User Workflows', () => {
       await page.getByRole('button', { name: /Full Article/i }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
 
-      // Browse Generate tab
-      await page.getByRole('button', { name: /Generate/i }).click();
+      // Browse Generate Content tab
+      await page.getByRole('button', { name: 'Generate Content' }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+
+      // Browse Generate Image tab
+      await page.getByRole('button', { name: 'Generate Image' }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
     }
   });

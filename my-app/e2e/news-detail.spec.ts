@@ -34,8 +34,12 @@ test.describe('News Detail Modal', () => {
     await expect(page.getByRole('button', { name: /Full Article/i })).toBeVisible();
   });
 
-  test('should have Generate tab', async ({ authenticatedPage: page }) => {
-    await expect(page.getByRole('button', { name: /Generate/i })).toBeVisible();
+  test('should have Generate Content tab', async ({ authenticatedPage: page }) => {
+    await expect(page.getByRole('button', { name: 'Generate Content' })).toBeVisible();
+  });
+
+  test('should have Generate Image tab', async ({ authenticatedPage: page }) => {
+    await expect(page.getByRole('button', { name: 'Generate Image' })).toBeVisible();
   });
 
   test('should switch to Full Article tab', async ({ authenticatedPage: page }) => {
@@ -44,14 +48,14 @@ test.describe('News Detail Modal', () => {
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
-  test('should switch to Generate tab', async ({ authenticatedPage: page }) => {
-    await page.getByRole('button', { name: /Generate/i }).click();
+  test('should switch to Generate Content tab', async ({ authenticatedPage: page }) => {
+    await page.getByRole('button', { name: 'Generate Content' }).click();
     // Should still be in modal (tab switched)
     await expect(page.getByRole('dialog')).toBeVisible();
   });
 
-  test('should show platform buttons in Generate tab', async ({ authenticatedPage: page }) => {
-    await page.getByRole('button', { name: /Generate/i }).click();
+  test('should show platform buttons in Generate Content tab', async ({ authenticatedPage: page }) => {
+    await page.getByRole('button', { name: 'Generate Content' }).click();
     await expect(page.getByText('Threads', { exact: false })).toBeVisible();
     await expect(page.getByText('LinkedIn', { exact: false })).toBeVisible();
   });
