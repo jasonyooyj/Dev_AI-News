@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -43,8 +43,6 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [iconState, setIconState] = useState<'idle' | 'entering'>('idle');
-  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -57,50 +55,51 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
     document.documentElement.classList.toggle('dark', initialTheme === 'dark');
   }, []);
 
-  const createRipple = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    const button = buttonRef.current;
-    if (!button) return;
-
-    const rect = button.getBoundingClientRect();
-    const ripple = document.createElement('span');
-    const size = Math.max(rect.width, rect.height);
-    const x = event.clientX - rect.left - size / 2;
-    const y = event.clientY - rect.top - size / 2;
-
-    ripple.style.width = ripple.style.height = `${size}px`;
-    ripple.style.left = `${x}px`;
-    ripple.style.top = `${y}px`;
-    ripple.className = `theme-ripple ${theme === 'light' ? 'dark' : 'light'}`;
-
-    button.appendChild(ripple);
-
-    setTimeout(() => {
-      ripple.remove();
-    }, 500);
-  }, [theme]);
-
-  const toggleTheme = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+  const toggleTheme = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
     if (isAnimating) return;
-
     setIsAnimating(true);
-    setIconState('entering');
-    createRipple(event);
 
-    // Add theme-transition class for smooth color transitions
-    document.documentElement.classList.add('theme-transition');
+    const x = event.clientX;
+    const y = event.clientY;
+
+    // Calculate the maximum radius needed to cover the entire screen
+    const maxRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    // Set CSS variables for the reveal animation
+    document.documentElement.style.setProperty('--reveal-x', `${x}px`);
+    document.documentElement.style.setProperty('--reveal-y', `${y}px`);
+    document.documentElement.style.setProperty('--reveal-radius', `${maxRadius}px`);
 
     const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
 
-    // Remove transition class after animation completes
-    setTimeout(() => {
-      document.documentElement.classList.remove('theme-transition');
-      setIsAnimating(false);
-      setIconState('idle');
-    }, 400);
-  }, [theme, isAnimating, createRipple]);
+    // Check if View Transitions API is supported
+    const supportsViewTransitions = 'startViewTransition' in document;
+
+    if (supportsViewTransitions) {
+      // Use View Transitions API for smooth circular reveal
+      const transition = (document as Document & { startViewTransition: (callback: () => void) => { finished: Promise<void> } }).startViewTransition(() => {
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+        document.documentElement.classList.toggle('dark', newTheme === 'dark');
+      });
+
+      try {
+        await transition.finished;
+      } catch {
+        // Transition was skipped or failed, but theme is already applied
+      }
+    } else {
+      // Fallback for browsers without View Transitions
+      setTheme(newTheme);
+      localStorage.setItem('theme', newTheme);
+      document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    }
+
+    setIsAnimating(false);
+  }, [theme, isAnimating]);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md">
@@ -163,7 +162,6 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
         <div className="flex items-center gap-2">
           {mounted && (
             <button
-              ref={buttonRef}
               onClick={toggleTheme}
               disabled={isAnimating}
               aria-label={
@@ -178,30 +176,22 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
                 hover:bg-zinc-200 dark:hover:bg-zinc-700
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                 dark:focus:ring-offset-zinc-900
-                disabled:cursor-not-allowed
+                disabled:cursor-not-allowed disabled:opacity-50
               "
             >
               <span className="relative w-5 h-5">
                 {/* Sun Icon - shown in dark mode */}
                 <Sun
                   className={`
-                    absolute inset-0 w-5 h-5 text-amber-500
-                    ${theme === 'dark'
-                      ? iconState === 'entering'
-                        ? 'theme-icon-sun-enter theme-icon-pulse-sun'
-                        : 'opacity-100'
-                      : 'theme-icon-sun-exit pointer-events-none'}
+                    theme-icon absolute inset-0 w-5 h-5 text-amber-500
+                    ${theme === 'dark' ? 'theme-icon-visible' : 'theme-icon-hidden'}
                   `}
                 />
                 {/* Moon Icon - shown in light mode */}
                 <Moon
                   className={`
-                    absolute inset-0 w-5 h-5 text-slate-600 dark:text-slate-400
-                    ${theme === 'light'
-                      ? iconState === 'entering'
-                        ? 'theme-icon-moon-enter theme-icon-pulse-moon'
-                        : 'opacity-100'
-                      : 'theme-icon-moon-exit pointer-events-none'}
+                    theme-icon absolute inset-0 w-5 h-5 text-slate-600
+                    ${theme === 'light' ? 'theme-icon-visible' : 'theme-icon-hidden'}
                   `}
                 />
               </span>
