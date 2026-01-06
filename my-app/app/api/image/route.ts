@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateNewsImage } from "@/lib/gemini";
-import { getPlatformImageSize, createFinalImage } from "@/lib/image-overlay";
+import { getPlatformImageSize } from "@/lib/image-overlay";
 
 interface RequestBody {
   mode: "generate" | "sizes";
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       const targetAspectRatio = aspectRatio || "9:16";
       const summaryText = summary || headline;
 
-      // 1단계: Gemini로 AI 배경 이미지 생성
+      // Gemini로 헤드라인 텍스트가 포함된 이미지 생성
       const aiImage = await generateNewsImage(
         headline,
         summaryText,
@@ -86,19 +86,11 @@ export async function POST(request: NextRequest) {
         targetAspectRatio
       );
 
-      // 2단계: 헤드라인 텍스트 오버레이
-      const finalImage = await createFinalImage(
-        aiImage.base64,
-        headline,
-        platform,
-        targetAspectRatio
-      );
-
       const size = getPlatformImageSize(platform, targetAspectRatio);
 
       return NextResponse.json({
-        base64: finalImage.base64,
-        mimeType: finalImage.mimeType,
+        base64: aiImage.base64,
+        mimeType: aiImage.mimeType,
         width: size.width,
         height: size.height,
         aspectRatio: targetAspectRatio,
@@ -127,7 +119,7 @@ export async function GET(request: NextRequest) {
     const platform = searchParams.get("platform") || "twitter";
     const aspectRatio = searchParams.get("aspect") || "9:16";
 
-    // 1단계: AI 배경 이미지 생성
+    // Gemini로 헤드라인 텍스트가 포함된 이미지 생성
     const aiImage = await generateNewsImage(
       headline,
       headline,
@@ -135,19 +127,11 @@ export async function GET(request: NextRequest) {
       aspectRatio
     );
 
-    // 2단계: 헤드라인 텍스트 오버레이
-    const finalImage = await createFinalImage(
-      aiImage.base64,
-      headline,
-      platform,
-      aspectRatio
-    );
-
-    const imageBuffer = Buffer.from(finalImage.base64, "base64");
+    const imageBuffer = Buffer.from(aiImage.base64, "base64");
 
     return new NextResponse(imageBuffer, {
       headers: {
-        "Content-Type": finalImage.mimeType || "image/png",
+        "Content-Type": aiImage.mimeType || "image/png",
         "Cache-Control": "public, max-age=3600",
       },
     });

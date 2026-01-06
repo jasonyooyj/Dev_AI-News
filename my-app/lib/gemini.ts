@@ -443,7 +443,7 @@ Keep it under 80 words. No explanations, just the prompt.`;
   return response.text || "Modern tech workspace with abstract data visualization, dark ambient lighting";
 }
 
-// AI 뉴스 이미지 생성 (기사 내용 기반 동적 프롬프트)
+// AI 뉴스 이미지 생성 (헤드라인 텍스트 포함)
 export async function generateNewsImage(
   headline: string,
   summary: string,
@@ -455,26 +455,35 @@ export async function generateNewsImage(
   // 1단계: 기사 내용 분석하여 이미지 설명 생성
   const imageDescription = await analyzeContentForImage(headline, summary);
 
-  // 2단계: 깔끔한 배경 이미지 생성 (텍스트 없이)
-  const prompt = `Create a professional background image for a social media news card.
+  // 2단계: 헤드라인 텍스트가 포함된 뉴스 카드 이미지 생성
+  const prompt = `Create a professional social media news card image with the following Korean headline text displayed prominently.
 
-SCENE TO GENERATE:
+HEADLINE TEXT TO DISPLAY (must appear exactly as written):
+"${headline}"
+
+BACKGROUND SCENE:
 ${imageDescription}
 
-CRITICAL RULES:
-- DO NOT include ANY text, typography, letters, or words in the image
-- DO NOT add blur zones, vignettes, or special overlay areas
-- Generate a CLEAN, full-frame image that fills the entire canvas
-- The image should work as a background for text overlay
+DESIGN REQUIREMENTS:
+1. TEXT STYLING:
+   - Display the headline text in clean, modern sans-serif font (like Pretendard or similar)
+   - Text color: WHITE with subtle drop shadow for readability
+   - Text position: TOP area of the image (upper 30%)
+   - Text size: Large and prominent, easy to read
+   - Line breaks: Keep natural line breaks if present in the headline
 
-Technical specifications:
-- DSLR quality, 50mm lens, shallow depth of field
-- Professional lighting with slight film color grading
-- Prefer darker or muted tones for better text readability
-- Clean composition, subject can be centered or slightly lower
+2. BACKGROUND:
+   - The scene described above should fill the entire canvas
+   - Apply a subtle dark gradient overlay at the top for text readability
+   - DSLR quality, professional lighting
+   - Darker or muted tones work best
 
-Style: Photorealistic, modern, professional tech/news aesthetic.
-NO TEXT OR TYPOGRAPHY ANYWHERE IN THE IMAGE.`;
+3. COMPOSITION:
+   - Clean, modern, professional news card aesthetic
+   - The headline must be the focal point and clearly readable
+   - Background should complement, not compete with the text
+
+CRITICAL: The Korean headline text MUST be rendered correctly and be clearly readable.`;
 
   const geminiAspectRatio = convertAspectRatio(aspectRatio);
 
