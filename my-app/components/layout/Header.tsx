@@ -59,43 +59,30 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
     if (isAnimating) return;
     setIsAnimating(true);
 
+    // Set click position for circular reveal
     const x = event.clientX;
     const y = event.clientY;
-
-    // Calculate the maximum radius needed to cover the entire screen
-    const maxRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
-    );
-
-    // Set CSS variables for the reveal animation
     document.documentElement.style.setProperty('--reveal-x', `${x}px`);
     document.documentElement.style.setProperty('--reveal-y', `${y}px`);
-    document.documentElement.style.setProperty('--reveal-radius', `${maxRadius}px`);
 
     const newTheme = theme === 'light' ? 'dark' : 'light';
 
-    // Check if View Transitions API is supported
-    const supportsViewTransitions = 'startViewTransition' in document;
-
-    if (supportsViewTransitions) {
-      // Use View Transitions API for smooth circular reveal
-      const transition = (document as Document & { startViewTransition: (callback: () => void) => { finished: Promise<void> } }).startViewTransition(() => {
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        document.documentElement.classList.toggle('dark', newTheme === 'dark');
-      });
-
-      try {
-        await transition.finished;
-      } catch {
-        // Transition was skipped or failed, but theme is already applied
-      }
-    } else {
-      // Fallback for browsers without View Transitions
+    const applyTheme = () => {
       setTheme(newTheme);
       localStorage.setItem('theme', newTheme);
       document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    };
+
+    // Use View Transitions API if supported
+    if ('startViewTransition' in document) {
+      try {
+        const transition = (document as unknown as { startViewTransition: (cb: () => void) => { finished: Promise<void> } }).startViewTransition(applyTheme);
+        await transition.finished;
+      } catch {
+        // Transition skipped
+      }
+    } else {
+      applyTheme();
     }
 
     setIsAnimating(false);

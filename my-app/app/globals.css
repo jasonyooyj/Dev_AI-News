@@ -282,69 +282,30 @@ html.dark {
 /* View Transitions API - Circular Reveal */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation: none;
+  animation-duration: 400ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   mix-blend-mode: normal;
+  will-change: clip-path;
 }
 
+/* Old view stays in place, new view reveals on top */
 ::view-transition-old(root) {
   z-index: 1;
+  animation: none;
 }
 
 ::view-transition-new(root) {
-  z-index: 9999;
-  clip-path: circle(0px at var(--reveal-x) var(--reveal-y));
-  animation: circular-reveal 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 999;
+  animation: circular-reveal 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @keyframes circular-reveal {
-  to {
-    clip-path: circle(var(--reveal-radius) at var(--reveal-x) var(--reveal-y));
+  from {
+    clip-path: circle(0% at var(--reveal-x) var(--reveal-y));
   }
-}
-
-/* Reverse animation for dark to light */
-html.dark::view-transition-old(root) {
-  z-index: 9999;
-  animation: none;
-}
-
-html.dark::view-transition-new(root) {
-  z-index: 1;
-  animation: none;
-  clip-path: none;
-}
-
-html:not(.dark)::view-transition-old(root) {
-  clip-path: circle(var(--reveal-radius) at var(--reveal-x) var(--reveal-y));
-  animation: circular-reveal-reverse 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-@keyframes circular-reveal-reverse {
   to {
-    clip-path: circle(0px at var(--reveal-x) var(--reveal-y));
+    clip-path: circle(150% at var(--reveal-x) var(--reveal-y));
   }
-}
-
-/* Fallback for browsers without View Transitions */
-.theme-reveal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  clip-path: circle(0px at var(--reveal-x) var(--reveal-y));
-  transition: clip-path 500ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.theme-reveal-overlay.active {
-  clip-path: circle(var(--reveal-radius) at var(--reveal-x) var(--reveal-y));
-}
-
-.theme-reveal-overlay.light {
-  background: var(--background);
-}
-
-.theme-reveal-overlay.dark {
-  background: #09090b;
 }
 
 /* Theme Toggle Button */
