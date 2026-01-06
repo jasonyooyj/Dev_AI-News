@@ -397,38 +397,40 @@ async function analyzeContentForImage(
 ): Promise<string> {
   const ai = getGeminiClient();
 
-  const analysisPrompt = `You are an expert at creating image generation prompts for news articles.
+  const analysisPrompt = `You are an expert at creating image generation prompts for news article backgrounds.
 
-Analyze this news headline and summary, then create a specific image prompt.
+Analyze this news headline and summary, then create a specific image prompt for a BACKGROUND image.
 
 Headline: ${headline}
 Summary: ${summary}
 
+IMPORTANT: This image will have text overlaid later. Generate a CLEAN background only.
+
 Rules:
 1. If a specific PERSON is the focus (CEO, researcher, etc.):
-   - Describe them: "Professional portrait of [description], [ethnicity] [gender], [age]s, [clothing], [expression]"
-   - Use realistic photography style
+   - Professional portrait, centered composition
+   - Leave some space at top for text overlay
 
 2. If a COMPANY/BRAND is the focus (OpenAI, Google, Meta, etc.):
-   - Feature their recognizable logo or brand colors prominently
-   - Modern corporate/tech environment
+   - Feature their recognizable logo or brand colors
+   - Modern, clean tech environment
 
 3. If a PRODUCT/TECHNOLOGY is the focus:
-   - Show the product or a visualization of the technology
-   - Clean product photography style
+   - Clean product visualization
+   - Professional aesthetic
 
 4. If it's an ABSTRACT CONCEPT (AI trend, market analysis, etc.):
-   - Use symbolic imagery, data visualizations, or conceptual art
+   - Symbolic imagery, data visualizations, conceptual art
    - Modern, professional aesthetic
 
 Output ONLY the image description in English. Be specific about:
-- Main subject (person/logo/product/concept)
+- Main subject (centered, not at the very top)
 - Environment/background
 - Lighting and mood
-- Camera angle and style
-- Colors
+- Colors (prefer darker/muted tones for text readability)
 
-Keep it under 100 words. No explanations, just the prompt.`;
+DO NOT include any text or typography in the image.
+Keep it under 80 words. No explanations, just the prompt.`;
 
   const response = await ai.models.generateContent({
     model: MODEL,
@@ -438,7 +440,7 @@ Keep it under 100 words. No explanations, just the prompt.`;
     },
   });
 
-  return response.text || "Modern tech workspace with abstract data visualization";
+  return response.text || "Modern tech workspace with abstract data visualization, dark ambient lighting";
 }
 
 // AI 뉴스 이미지 생성 (기사 내용 기반 동적 프롬프트)
@@ -453,33 +455,26 @@ export async function generateNewsImage(
   // 1단계: 기사 내용 분석하여 이미지 설명 생성
   const imageDescription = await analyzeContentForImage(headline, summary);
 
-  // 헤드라인 줄바꿈 처리
-  const formattedHeadline = headline.trim();
-
-  // 2단계: 최종 이미지 생성 프롬프트
-  const prompt = `Create a professional social media news card image.
+  // 2단계: 깔끔한 배경 이미지 생성 (텍스트 없이)
+  const prompt = `Create a professional background image for a social media news card.
 
 SCENE TO GENERATE:
 ${imageDescription}
 
-CRITICAL - HEADLINE TEXT:
-Display this exact text in the upper portion:
-"${formattedHeadline}"
-
-Text requirements:
-- Bold Pretendard font (Korean sans-serif)
-- White color with subtle shadow for contrast
-- Positioned in upper 1/3, CENTER-ALIGNED horizontally
-- Medium font size (not too large, elegant and balanced)
+CRITICAL RULES:
+- DO NOT include ANY text, typography, letters, or words in the image
+- DO NOT add blur zones, vignettes, or special overlay areas
+- Generate a CLEAN, full-frame image that fills the entire canvas
+- The image should work as a background for text overlay
 
 Technical specifications:
-- DSLR quality, 50mm lens, f/2.8 depth of field
-- Professional lighting, slight film color grading
-- Dark or muted background tones for text readability
-- 9:16 vertical composition
-- Subject in lower 2/3, text area in upper 1/3
+- DSLR quality, 50mm lens, shallow depth of field
+- Professional lighting with slight film color grading
+- Prefer darker or muted tones for better text readability
+- Clean composition, subject can be centered or slightly lower
 
-Style: Photorealistic, modern, professional tech/news aesthetic.`;
+Style: Photorealistic, modern, professional tech/news aesthetic.
+NO TEXT OR TYPOGRAPHY ANYWHERE IN THE IMAGE.`;
 
   const geminiAspectRatio = convertAspectRatio(aspectRatio);
 

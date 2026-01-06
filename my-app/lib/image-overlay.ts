@@ -117,6 +117,9 @@ export async function addHeadlineToImage(
     })
     .join("\n");
 
+  // 그라데이션 높이 계산 (텍스트 영역 + 여유 공간)
+  const gradientHeight = textBlockHeight + padding * 2;
+
   const svgOverlay = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -127,20 +130,25 @@ export async function addHeadlineToImage(
             font-size: ${fontSize}px;
             font-weight: bold;
             fill: ${textColor};
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
           }
         </style>
         <linearGradient id="textBg" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:${backgroundColor}"/>
+          <stop offset="0%" style="stop-color:rgba(0,0,0,0.7)"/>
+          <stop offset="60%" style="stop-color:rgba(0,0,0,0.4)"/>
           <stop offset="100%" style="stop-color:rgba(0,0,0,0)"/>
         </linearGradient>
+        <filter id="textShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.6)"/>
+        </filter>
       </defs>
 
-      <!-- 텍스트 배경 그라데이션 -->
-      <rect x="0" y="${bgY}" width="${width}" height="${textBlockHeight + 40}" fill="url(#textBg)"/>
+      <!-- 헤드라인 영역에만 부드러운 그라데이션 -->
+      <rect x="0" y="${bgY}" width="${width}" height="${gradientHeight}" fill="url(#textBg)"/>
 
-      <!-- 헤드라인 텍스트 -->
-      ${textElements}
+      <!-- 헤드라인 텍스트 (그림자 효과 포함) -->
+      <g filter="url(#textShadow)">
+        ${textElements}
+      </g>
     </svg>
   `;
 
