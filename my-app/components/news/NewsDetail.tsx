@@ -853,6 +853,7 @@ export function NewsDetail({
               summary={news.quickSummary?.bullets?.join(' ') || news.title}
               originalContent={news.originalContent}
               platforms={platforms}
+              autoFetchSuggestions={true}
               onImageGenerated={(platform, image) => {
                 console.log('Image generated for', platform, image);
               }}

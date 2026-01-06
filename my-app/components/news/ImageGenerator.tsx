@@ -19,6 +19,7 @@ interface ImageGeneratorProps {
   originalContent?: string;
   platforms?: Platform[];
   onImageGenerated?: (platform: Platform, image: GeneratedImage) => void;
+  autoFetchSuggestions?: boolean;
 }
 
 interface HeadlineSuggestion {
@@ -32,6 +33,7 @@ export function ImageGenerator({
   originalContent,
   platforms = ["twitter", "threads", "instagram", "linkedin", "bluesky"],
   onImageGenerated,
+  autoFetchSuggestions = false,
 }: ImageGeneratorProps) {
   const { isGenerating, error, generateImage, getSizes } = useImageGeneration();
   const { images: galleryImages, addImage, deleteImage, clearAll, count: galleryCount, getTotalSize } = useImageGallery();
@@ -108,6 +110,14 @@ export function ImageGenerator({
     setEditableHeadline(suggestion.replace(/\\n/g, "\n"));
     setHasUserEdited(true);
   }, []);
+
+  // Auto-fetch suggestions on mount if enabled
+  useEffect(() => {
+    if (autoFetchSuggestions && initialHeadline && !suggestions) {
+      handleGenerateSuggestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFetchSuggestions]);
 
   const handleGenerate = useCallback(async () => {
     const result = await generateImage({
