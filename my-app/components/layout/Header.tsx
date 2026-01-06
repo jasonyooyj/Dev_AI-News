@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -43,6 +43,8 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [iconState, setIconState] = useState<'idle' | 'entering'>('idle');
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -55,10 +57,34 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
     document.documentElement.classList.toggle('dark', initialTheme === 'dark');
   }, []);
 
-  const toggleTheme = useCallback(() => {
+  const createRipple = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    const size = Math.max(rect.width, rect.height);
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+
+    ripple.style.width = ripple.style.height = `${size}px`;
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    ripple.className = `theme-ripple ${theme === 'light' ? 'dark' : 'light'}`;
+
+    button.appendChild(ripple);
+
+    setTimeout(() => {
+      ripple.remove();
+    }, 500);
+  }, [theme]);
+
+  const toggleTheme = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
     if (isAnimating) return;
 
     setIsAnimating(true);
+    setIconState('entering');
+    createRipple(event);
 
     // Add theme-transition class for smooth color transitions
     document.documentElement.classList.add('theme-transition');
@@ -72,8 +98,9 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
     setTimeout(() => {
       document.documentElement.classList.remove('theme-transition');
       setIsAnimating(false);
-    }, 200);
-  }, [theme, isAnimating]);
+      setIconState('idle');
+    }, 400);
+  }, [theme, isAnimating, createRipple]);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md">
@@ -82,9 +109,9 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            size="sm"
+            size="md"
             onClick={onMenuClick}
-            className="lg:hidden"
+            className="lg:hidden touch-target"
             aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
           >
             {isSidebarOpen ? (
@@ -136,15 +163,16 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
         <div className="flex items-center gap-2">
           {mounted && (
             <button
+              ref={buttonRef}
               onClick={toggleTheme}
               disabled={isAnimating}
               aria-label={
                 theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'
               }
               className="
-                theme-toggle-btn
+                theme-toggle-btn touch-target
                 relative flex items-center justify-center
-                w-10 h-10 rounded-xl
+                w-11 h-11 rounded-xl
                 bg-zinc-100 dark:bg-zinc-800
                 text-zinc-700 dark:text-zinc-200
                 hover:bg-zinc-200 dark:hover:bg-zinc-700
@@ -154,18 +182,26 @@ export function Header({ onMenuClick, isSidebarOpen }: HeaderProps) {
               "
             >
               <span className="relative w-5 h-5">
-                {/* Sun Icon */}
+                {/* Sun Icon - shown in dark mode */}
                 <Sun
                   className={`
-                    absolute inset-0 w-5 h-5
-                    ${theme === 'dark' ? 'theme-icon-enter' : 'opacity-0 scale-50'}
+                    absolute inset-0 w-5 h-5 text-amber-500
+                    ${theme === 'dark'
+                      ? iconState === 'entering'
+                        ? 'theme-icon-sun-enter theme-icon-pulse-sun'
+                        : 'opacity-100'
+                      : 'theme-icon-sun-exit pointer-events-none'}
                   `}
                 />
-                {/* Moon Icon */}
+                {/* Moon Icon - shown in light mode */}
                 <Moon
                   className={`
-                    absolute inset-0 w-5 h-5
-                    ${theme === 'light' ? 'theme-icon-enter' : 'opacity-0 scale-50'}
+                    absolute inset-0 w-5 h-5 text-slate-600 dark:text-slate-400
+                    ${theme === 'light'
+                      ? iconState === 'entering'
+                        ? 'theme-icon-moon-enter theme-icon-pulse-moon'
+                        : 'opacity-100'
+                      : 'theme-icon-moon-exit pointer-events-none'}
                   `}
                 />
               </span>
