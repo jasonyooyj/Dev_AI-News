@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Sparkles, RefreshCw, Loader2, Palette, Download, Copy, ImageIcon, Images, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -48,6 +48,9 @@ export function ImageGenerator({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [hasUserEdited, setHasUserEdited] = useState(false);
 
+  // Track if we've already fetched suggestions
+  const hasFetchedSuggestions = useRef(false);
+
   // Only update from prop if user hasn't manually edited
   useEffect(() => {
     if (!hasUserEdited && initialHeadline) {
@@ -55,9 +58,11 @@ export function ImageGenerator({
     }
   }, [initialHeadline, hasUserEdited]);
 
-  // Reset hasUserEdited when modal closes/reopens (initialHeadline changes significantly)
+  // Reset states when modal closes/reopens (initialHeadline changes significantly)
   useEffect(() => {
     setHasUserEdited(false);
+    setSuggestions(null);
+    hasFetchedSuggestions.current = false;
   }, [initialHeadline]);
 
   // Handle user input
@@ -111,13 +116,13 @@ export function ImageGenerator({
     setHasUserEdited(true);
   }, []);
 
-  // Auto-fetch suggestions on mount if enabled
+  // Auto-fetch suggestions when component mounts with valid headline
   useEffect(() => {
-    if (autoFetchSuggestions && initialHeadline && !suggestions) {
+    if (autoFetchSuggestions && initialHeadline && !hasFetchedSuggestions.current) {
+      hasFetchedSuggestions.current = true;
       handleGenerateSuggestions();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoFetchSuggestions]);
+  }, [autoFetchSuggestions, initialHeadline, handleGenerateSuggestions]);
 
   const handleGenerate = useCallback(async () => {
     const result = await generateImage({
@@ -194,7 +199,7 @@ export function ImageGenerator({
             size="sm"
             onClick={handleGenerateSuggestions}
             disabled={isLoadingSuggestions}
-            className="text-xs"
+            className="text-xs touch-target"
           >
             {isLoadingSuggestions ? (
               <>
@@ -235,7 +240,7 @@ export function ImageGenerator({
             {/* Main suggestion */}
             <button
               onClick={() => handleSelectSuggestion(suggestions.main)}
-              className={`w-full p-2.5 text-left text-sm rounded-lg border transition-all ${
+              className={`w-full p-3 min-h-[44px] text-left text-sm rounded-lg border transition-all touch-manipulation ${
                 editableHeadline === suggestions.main.replace(/\\n/g, "\n")
                   ? "border-primary bg-primary/10"
                   : "border-border hover:border-primary/50 bg-card"
@@ -254,7 +259,7 @@ export function ImageGenerator({
               <button
                 key={idx}
                 onClick={() => handleSelectSuggestion(alt)}
-                className={`w-full p-2.5 text-left text-sm rounded-lg border transition-all ${
+                className={`w-full p-3 min-h-[44px] text-left text-sm rounded-lg border transition-all touch-manipulation ${
                   editableHeadline === alt.replace(/\\n/g, "\n")
                     ? "border-primary bg-primary/10"
                     : "border-border hover:border-primary/50 bg-card"
@@ -391,14 +396,19 @@ export function ImageGenerator({
         저장된 이미지 보기 ({galleryCount}개)
       </Button>
 
-      {/* 갤러리 모달 */}
+      {/* 갤러리 모달 - 모바일: 바텀시트, 데스크톱: 센터 모달 */}
       {showGallery && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
           <div
             className="absolute inset-0 bg-black/60"
             onClick={() => setShowGallery(false)}
           />
-          <div className="relative z-10 w-full max-w-4xl max-h-[85vh] bg-white dark:bg-zinc-900 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+          <div className="relative z-10 w-full md:max-w-4xl max-h-[90vh] md:max-h-[85vh] bg-white dark:bg-zinc-900 rounded-t-2xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col bottom-sheet-enter md:animate-none safe-area-bottom">
+            {/* 드래그 핸들 (모바일만) */}
+            <div className="md:hidden flex justify-center py-2">
+              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+            </div>
+
             {/* 헤더 */}
             <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
               <div>
@@ -419,16 +429,17 @@ export function ImageGenerator({
                         clearAll();
                       }
                     }}
-                    className="text-red-500 hover:text-red-600"
+                    className="text-red-500 hover:text-red-600 touch-target"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
-                    전체 삭제
+                    <span className="hidden sm:inline">전체 삭제</span>
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowGallery(false)}
+                  className="touch-target"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -448,7 +459,7 @@ export function ImageGenerator({
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                   {galleryImages.map((img) => (
                     <GalleryImageCard
                       key={img.id}
@@ -510,28 +521,28 @@ function GalleryImageCard({ image, onDelete }: GalleryImageCardProps) {
           alt={image.headline}
           className="w-full h-full object-cover"
         />
-        {/* 호버 오버레이 */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+        {/* 호버/터치 오버레이 */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 md:transition-all flex items-center justify-center gap-2 md:opacity-0 group-hover:opacity-100">
           <button
             onClick={handleDownload}
-            className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-white/90 rounded-full hover:bg-white transition-colors touch-manipulation"
             title="다운로드"
           >
-            <Download className="w-4 h-4 text-zinc-700" />
+            <Download className="w-5 h-5 text-zinc-700" />
           </button>
           <button
             onClick={handleCopy}
-            className="p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-white/90 rounded-full hover:bg-white transition-colors touch-manipulation"
             title="복사"
           >
-            <Copy className="w-4 h-4 text-zinc-700" />
+            <Copy className="w-5 h-5 text-zinc-700" />
           </button>
           <button
             onClick={onDelete}
-            className="p-2 bg-red-500/90 rounded-full hover:bg-red-500 transition-colors"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-red-500/90 rounded-full hover:bg-red-500 transition-colors touch-manipulation"
             title="삭제"
           >
-            <Trash2 className="w-4 h-4 text-white" />
+            <Trash2 className="w-5 h-5 text-white" />
           </button>
         </div>
       </div>
