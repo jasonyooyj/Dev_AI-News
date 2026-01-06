@@ -153,9 +153,10 @@ export function NewsList({
     const lastReadTime = new Date(lastReadAt).getTime();
     let markerIndex = -1;
 
-    // 최신순으로 정렬된 뉴스에서 lastReadAt보다 나중에 생성된 뉴스 개수 찾기
+    // 최신순으로 정렬된 뉴스에서 lastReadAt보다 나중에 DB에 추가된 뉴스 개수 찾기
+    // createdAt 사용 (publishedAt은 원본 발행일로 항상 과거 시점)
     for (let i = 0; i < filteredNews.length; i++) {
-      const newsTime = new Date(filteredNews[i].publishedAt || filteredNews[i].createdAt).getTime();
+      const newsTime = new Date(filteredNews[i].createdAt).getTime();
       if (newsTime <= lastReadTime) {
         markerIndex = i;
         break;
