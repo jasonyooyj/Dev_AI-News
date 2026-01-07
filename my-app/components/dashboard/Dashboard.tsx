@@ -251,36 +251,36 @@ export function Dashboard() {
       isRefreshing={isRefreshingSources}
     >
       <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <div className="text-sm text-muted-foreground">Total News</div>
+        {/* Stats Cards - 모바일: 가로 스크롤, 데스크탑: 그리드 */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 md:grid-cols-5 sm:overflow-visible">
+          <Card className="flex-shrink-0 w-28 sm:w-auto">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Total</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{stats.summarized}</div>
-              <div className="text-sm text-muted-foreground">Summarized</div>
+          <Card className="flex-shrink-0 w-28 sm:w-auto">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.summarized}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Summarized</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
-              <div className="text-sm text-muted-foreground">Pending</div>
+          <Card className="flex-shrink-0 w-28 sm:w-auto">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-amber-600">{stats.pending}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Pending</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-amber-500">{stats.bookmarked}</div>
-              <div className="text-sm text-muted-foreground">Bookmarked</div>
+          <Card className="flex-shrink-0 w-28 sm:w-auto">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-amber-500">{stats.bookmarked}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Bookmarked</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{stats.activeSources}</div>
-              <div className="text-sm text-muted-foreground">Active Sources</div>
+          <Card className="flex-shrink-0 w-28 sm:w-auto">
+            <CardContent className="p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.activeSources}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Sources</div>
             </CardContent>
           </Card>
         </div>
