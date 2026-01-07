@@ -149,4 +149,4 @@ my-app/
 
 ## Version
 
-Current: **v0.9.2**
+Current: **v0.9.3**

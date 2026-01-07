@@ -2,7 +2,7 @@
 
 > AI 뉴스 수집 → AI 요약 → 소셜 미디어 콘텐츠 자동 생성 웹 대시보드
 
-![Version](https://img.shields.io/badge/version-0.9.1-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.9.3-blue?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
 ![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
@@ -122,13 +122,12 @@ my-app/
 
 ## 버전 히스토리
 
+- **v0.9.3** - 플랫폼별 콘텐츠 생성 프롬프트 고도화
+- **v0.9.2** - 이미지 생성 탭 상태 영속화
 - **v0.9.1** - NewsDetail 모달 레이아웃 개선
 - **v0.9.0** - Gemini AI 전환, YouTube/Twitter/Threads 스크래핑, 우선순위 시스템
-- **v0.8.1** - README 문서 전면 개편 및 Firebase 설정 파일 정리
 - **v0.8.0** - 인증 제거, 공개 접근 모델
-- **v0.7.1** - 버그 수정 (뉴스 중복, 임시 ID 오류)
 - **v0.7.0** - Firebase → Neon PostgreSQL 마이그레이션
-- **v0.6.0** - E2E 테스트 개선
 - **v0.5.0** - 소셜 미디어 4개 플랫폼 API 연동
 
 ## 라이선스

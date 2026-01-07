@@ -8,9 +8,8 @@ The E2E test suite covers:
 
 1. **Home Page** - News list display, stats cards, navigation
 2. **News Detail Modal** - Content viewing, tab navigation, content generation
-3. **API Routes** - OpenAI, RSS, and scrape endpoints
-4. **AI Provider Selection** - OpenAI vs DeepSeek provider switching
-5. **User Workflows** - Complete user journeys through the application
+3. **API Routes** - AI, RSS, and scrape endpoints
+4. **User Workflows** - Complete user journeys through the application
 
 ## Test Files
 
@@ -25,7 +24,6 @@ The E2E test suite covers:
 - **`home.spec.ts`** - Home page and news list tests
 - **`news-detail.spec.ts`** - News detail modal tests
 - **`api.spec.ts`** - API endpoint tests
-- **`ai-provider.spec.ts`** - AI provider selection tests
 - **`user-workflows.spec.ts`** - Complete user journey tests
 
 ### Configuration & Utilities
@@ -108,21 +106,11 @@ test('should do something', async ({ page }) => {
 - Submit feedback and regenerate
 
 ### API Tests
-- Get provider status endpoint
 - Generate summaries (summarize mode)
 - Generate platform-specific content (generate mode)
-- Analyze writing style (analyze-style mode)
 - Regenerate with feedback (regenerate mode)
 - Fetch RSS feeds
 - Scrape web pages
-
-### AI Provider Tests
-- Detect available providers (OpenAI, DeepSeek)
-- Generate content with OpenAI
-- Generate content with DeepSeek
-- Provider fallback behavior
-- Client-side provider preference storage
-- Concurrent requests handling
 
 ### User Workflow Tests
 - News discovery workflow
@@ -140,8 +128,7 @@ test('should do something', async ({ page }) => {
 
 - **`setupApp()`** - Initialize app for testing
 - **`clearLocalStorage()`** - Clear browser storage
-- **`mockOpenAIProvider()`** - Mock OpenAI provider responses
-- **`mockDeepSeekProvider()`** - Mock DeepSeek provider responses
+- **`mockAIProvider()`** - Mock AI provider responses
 
 Usage:
 ```typescript
@@ -206,9 +193,8 @@ npx playwright install
 ### Environment Variables
 Create `.env.local` if needed:
 ```
-OPENAI_API_KEY=your-key-here
-DEEPSEEK_API_KEY=your-key-here
-AI_PROVIDER=openai
+GEMINI_API_KEY=your-key-here
+DATABASE_URL=your-neon-connection-string
 ```
 
 ## Configuration
@@ -352,7 +338,7 @@ test.describe('Feature Name', () => {
 - Ensure test isolation (clear storage, fresh navigation)
 
 ### API failures in tests
-- Check if API keys are configured
+- Check if GEMINI_API_KEY is configured
 - Mock API responses in tests
 - Verify API endpoint URLs
 - Check network connectivity
