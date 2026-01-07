@@ -156,6 +156,142 @@ export interface PlatformContentResult {
   hashtags?: string[];
 }
 
+// 플랫폼별 설정
+const platformConfigs: Record<
+  string,
+  { maxLength: number; description: string; style: string }
+> = {
+  twitter: {
+    maxLength: 280,
+    description: "X(트위터)",
+    style: `## 핵심
+- 한 문장으로 임팩트 있게
+- 숫자/팩트로 관심 유발
+- 이모지 1-2개만
+
+## 해시태그
+- 1-2개 최대
+- 본문에 자연스럽게 포함`,
+  },
+  threads: {
+    maxLength: 500,
+    description: "Threads",
+    style: `## 톤
+- 대화체, 친근하게
+- 의견/인사이트 포함 가능
+
+## 구조
+- 2-3문단으로 정보 전달
+- 문단 사이 줄바꿈
+- 질문으로 마무리해 댓글 유도
+- 해시태그 불필요 (선택적)`,
+  },
+  instagram: {
+    maxLength: 2200,
+    description: "Instagram",
+    style: `## 훅 라인 (첫 줄이 핵심!)
+- 피드에서 "...더 보기" 전에 보이는 유일한 텍스트
+- 호기심 유발/충격적 사실/질문 형식
+- 예: "이거 진짜 게임체인저입니다 🔥"
+
+## 구조
+1. 훅 라인 (1줄)
+2. [빈 줄]
+3. 핵심 내용 (1-2문단, 각 1-2문장)
+4. [빈 줄]
+5. 인사이트/시사점
+6. [빈 줄]
+7. CTA: "저장해두세요 💾" 또는 "여러분 생각은? 💬"
+
+## 포맷
+- 문단 = 1-2문장, 최대 3줄
+- 문단 사이 빈 줄 필수 (모바일 가독성)
+- 이모지: 문장 시작/중간에 자연스럽게 (끝에 몰아넣기 금지)
+- 전체 이모지 5-8개`,
+  },
+  linkedin: {
+    maxLength: 3000,
+    description: "LinkedIn",
+    style: `## 톤
+- 전문적, 인사이트 중심
+- 업계 영향 분석 포함
+
+## 구조
+1. 핵심 소식 (1-2문장)
+2. [빈 줄]
+3. 왜 중요한지 (2-3문단)
+4. [빈 줄]
+5. 시사점/전망
+6. (선택) 의견 요청
+
+## 포맷
+- 짧은 문단
+- 이모지 최소화 (0-3개)
+- 해시태그 3-5개 (전문적)`,
+  },
+};
+
+// Instagram 전용 시스템 프롬프트
+function getInstagramSystemPrompt(sourceName?: string): string {
+  return `Instagram 테크 콘텐츠 크리에이터입니다.
+
+## 훅 라인 작성법 (가장 중요!)
+피드에서 "...더 보기" 전에 보이는 첫 줄이 클릭을 결정합니다.
+- 호기심 자극: "이거 알고 계셨나요? 🤔"
+- 충격적 사실: "GPT-4가 드디어 128K 토큰을 지원합니다"
+- 가치 제안: "개발자라면 꼭 알아야 할 소식"
+- 감정 유발: "이 소식 보고 소름 돋았습니다 😱"
+
+## 모바일 가독성
+- 한 문단 = 1-2문장 (최대 3줄)
+- 문단 사이 빈 줄로 구분 (필수!)
+- 스크롤하며 쉽게 읽히도록
+
+## 이모지 사용법
+- 문장 시작 또는 중간에 자연스럽게
+- 끝에 몰아넣지 않기
+- 전체 5-8개 적정
+
+## CTA (마지막에 하나 선택)
+- "저장해두면 나중에 유용해요 💾"
+- "여러분 생각은? 댓글로 알려주세요 💬"
+- "알려주고 싶은 친구 태그 👇"
+
+## 규칙
+1. 글자수: 1100~1760자 (해시태그 제외)
+2. 고유명사 원문 유지 (OpenAI, GPT-4, Claude 등)
+3. 팩트 중심, 과장 금지
+${sourceName ? `4. 마지막에 "출처: ${sourceName}" 추가` : ""}
+
+JSON으로만 응답.`;
+}
+
+// Instagram 전용 유저 프롬프트
+function getInstagramUserPrompt(
+  title: string,
+  content: string,
+  url?: string
+): string {
+  return `다음 AI/테크 뉴스를 Instagram 캡션으로 변환해주세요:
+
+제목: ${title}
+내용: ${content}
+${url ? `링크: ${url}` : ""}
+
+## 응답 형식
+{
+  "content": "캡션 (훅 라인으로 시작, 줄바꿈 포함, CTA 포함)",
+  "charCount": 글자수,
+  "hashtags": ["해시태그들 8-15개"]
+}
+
+## 해시태그 구성 (8-15개)
+- 대중적 (3-4개): AI, Tech, Innovation, MachineLearning
+- 전문적 (3-4개): LLM, GPT, GenAI, MLOps, RAG
+- 한국어 (2-3개): 인공지능, 테크뉴스, AI소식, 딥러닝
+- 주제 관련 (2-3개): 뉴스 내용에 맞게`;
+}
+
 export async function generatePlatformContent(
   title: string,
   content: string,
@@ -165,38 +301,21 @@ export async function generatePlatformContent(
 ): Promise<PlatformContentResult> {
   const ai = getGeminiClient();
 
-  const platformConfigs: Record<
-    string,
-    { maxLength: number; description: string; style: string }
-  > = {
-    twitter: {
-      maxLength: 280,
-      description: "X(트위터)",
-      style: "핵심만 간결하게. 해시태그 1-2개.",
-    },
-    threads: {
-      maxLength: 500,
-      description: "Threads",
-      style: "정보 중심으로 깔끔하게 정리.",
-    },
-    instagram: {
-      maxLength: 2200,
-      description: "Instagram",
-      style: "읽기 쉽게 정리. 해시태그는 맨 마지막에.",
-    },
-    linkedin: {
-      maxLength: 3000,
-      description: "LinkedIn",
-      style: "전문적이고 깔끔하게. 인사이트 포함.",
-    },
-  };
-
   const config = platformConfigs[platform];
   if (!config) {
     throw new Error(`Invalid platform: ${platform}`);
   }
 
-  const systemPrompt = `테크 뉴스를 소셜 미디어용으로 정리합니다.
+  let systemPrompt: string;
+  let userPrompt: string;
+
+  if (platform === "instagram") {
+    // Instagram 전용 프롬프트
+    systemPrompt = getInstagramSystemPrompt(sourceName);
+    userPrompt = getInstagramUserPrompt(title, content, url);
+  } else {
+    // 다른 플랫폼용 공통 프롬프트 (개선된 style 포함)
+    systemPrompt = `테크 뉴스를 소셜 미디어용으로 정리합니다.
 
 ## 작성 스타일
 - 정보 전달 중심, 군더더기 없이
@@ -207,11 +326,13 @@ ${sourceName ? `- 마지막에 "출처: ${sourceName}" 추가` : ""}
 1. 팩트 중심 (숫자, 이름, 사실관계 정확히)
 2. ${Math.floor(config.maxLength * 0.5)}~${Math.floor(config.maxLength * 0.8)}자
 3. 고유명사 원문 유지
-4. ${config.style}
+
+## ${config.description} 가이드라인
+${config.style}
 
 JSON으로만 응답.`;
 
-  const userPrompt = `이 뉴스를 ${config.description} 포스트로 바꿔줘:
+    userPrompt = `이 뉴스를 ${config.description} 포스트로 바꿔줘:
 
 제목: ${title}
 내용: ${content}
@@ -219,8 +340,9 @@ ${url ? `링크: ${url}` : ""}
 
 {
   "content": "포스트 내용",
-  "charCount": 글자수${platform === "instagram" ? ',\n  "hashtags": ["해시태그들"]' : ""}
+  "charCount": 글자수
 }`;
+  }
 
   const response = await ai.models.generateContent({
     model: MODEL,
@@ -251,21 +373,40 @@ export async function regenerateContent(
 ): Promise<PlatformContentResult> {
   const ai = getGeminiClient();
 
-  const platformConfigs: Record<string, { maxLength: number }> = {
-    twitter: { maxLength: 280 },
-    threads: { maxLength: 500 },
-    instagram: { maxLength: 2200 },
-    linkedin: { maxLength: 3000 },
-  };
-
   const config = platformConfigs[platform];
   const maxLength = config?.maxLength || 500;
+  const description = config?.description || platform;
 
-  const systemPrompt = `피드백 반영해서 콘텐츠 수정해줘.
+  // 플랫폼별 스타일 가이드
+  const platformStyleGuide =
+    platform === "instagram"
+      ? `## Instagram 스타일
+- 훅 라인으로 시작 (호기심 유발)
+- 문단 사이 빈 줄 필수
+- 이모지는 문장 중간에 자연스럽게 (끝에 몰아넣기 금지)
+- 마지막에 CTA 포함 ("저장해두세요 💾" 등)`
+      : platform === "twitter"
+        ? `## X(트위터) 스타일
+- 한 문장으로 임팩트 있게
+- 이모지 1-2개만
+- 해시태그 1-2개`
+        : platform === "threads"
+          ? `## Threads 스타일
+- 대화체, 친근하게
+- 2-3문단으로 정보 전달
+- 질문으로 마무리`
+          : platform === "linkedin"
+            ? `## LinkedIn 스타일
+- 전문적, 인사이트 중심
+- 짧은 문단
+- 이모지 최소화`
+            : `## 기본 스타일
+- 2-3문장을 한 문단으로
+- 이모지는 문장 중간에 자연스럽게`;
 
-## 스타일
-- 2-3문장을 한 문단으로, 문단 사이 줄바꿈
-- 이모지는 문장 중간중간에 자연스럽게 (끝에만 몰아넣지 말 것)
+  const systemPrompt = `피드백 반영해서 ${description} 콘텐츠를 수정해줘.
+
+${platformStyleGuide}
 
 글자수 ${Math.floor(maxLength * 0.5)}~${Math.floor(maxLength * 0.8)}자. JSON으로만 응답.`;
 
@@ -276,7 +417,7 @@ ${previousContent}
 
 {
   "content": "수정된 내용",
-  "charCount": 글자수
+  "charCount": 글자수${platform === "instagram" ? ',\n  "hashtags": ["기존 해시태그 유지 또는 수정"]' : ""}
 }`;
 
   const response = await ai.models.generateContent({
