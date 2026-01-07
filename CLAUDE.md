@@ -14,7 +14,7 @@ npm run build               # 빌드
 | 항목 | 내용 |
 |------|------|
 | **What** | AI 뉴스 수집 → AI 요약 → 소셜 미디어 콘텐츠/이미지 생성 대시보드 |
-| **Version** | 0.9.2 |
+| **Version** | 0.9.3 |
 | **Auth** | 없음 (공개 접근, DEFAULT_USER_ID 사용) |
 | **Stack** | Next.js 15 + Neon PostgreSQL + Gemini AI |
 | **State** | Zustand (client) + TanStack Query (server) |
@@ -107,9 +107,9 @@ publish_history    → 게시 이력
 | Instagram | 2200 |
 | LinkedIn | 3000 |
 
-## Recent Changes (v0.9.2)
+## Recent Changes (v0.9.3)
 
-- 콘텐츠 생성 프롬프트 개선
-- 스타일 템플릿 선택 UI 제거
-- 출처 표기 기능 추가
-- analyzeStyle 기능 제거
+- 플랫폼별 콘텐츠 생성 프롬프트 고도화
+- Instagram 전용 프롬프트 (훅 라인, CTA, 해시태그 8-15개)
+- Twitter/Threads/LinkedIn 스타일 가이드라인 확장
+- regenerateContent() 플랫폼별 컨텍스트 지원
