@@ -849,6 +849,7 @@ export function NewsDetail({
               AI가 뉴스 내용에 맞는 이미지를 생성합니다. 상단에 Pretendard 폰트로 한글 헤드라인이 표시됩니다.
             </div>
             <ImageGenerator
+              newsId={news.id}
               headline={news.quickSummary?.bullets?.[0] || news.title}
               summary={news.quickSummary?.bullets?.join(' ') || news.title}
               originalContent={news.originalContent}

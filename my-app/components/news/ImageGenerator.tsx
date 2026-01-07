@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { Sparkles, RefreshCw, Loader2, Palette, Download, Copy, ImageIcon, Images, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -10,10 +10,12 @@ import {
   PLATFORM_IMAGE_SIZES,
   PLATFORM_CONFIGS,
 } from "@/types/news";
-import { useImageGeneration } from "@/hooks/useImageGeneration";
+import { useImageGenerationWithStore, useImageGeneration } from "@/hooks/useImageGeneration";
 import { useImageGallery, SavedImage } from "@/hooks/useImageGallery";
+import { useState } from "react";
 
 interface ImageGeneratorProps {
+  newsId: string;
   headline: string;
   summary?: string;
   originalContent?: string;
@@ -22,12 +24,8 @@ interface ImageGeneratorProps {
   autoFetchSuggestions?: boolean;
 }
 
-interface HeadlineSuggestion {
-  main: string;
-  alternatives: string[];
-}
-
 export function ImageGenerator({
+  newsId,
   headline: initialHeadline,
   summary,
   originalContent,
@@ -35,127 +33,42 @@ export function ImageGenerator({
   onImageGenerated,
   autoFetchSuggestions = false,
 }: ImageGeneratorProps) {
-  const { isGenerating, error, generateImage, getSizes } = useImageGeneration();
-  const { images: galleryImages, addImage, deleteImage, clearAll, count: galleryCount, getTotalSize } = useImageGallery();
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform>(platforms[0]);
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>("9:16");
-  const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
+  const {
+    isGenerating,
+    error,
+    selectedPlatform,
+    selectedAspectRatio,
+    generatedImage,
+    editableHeadline,
+    suggestions,
+    isLoadingSuggestions,
+    generateImage,
+    handlePlatformChange,
+    handleAspectRatioChange,
+    handleHeadlineChange,
+    handleSelectSuggestion,
+    generateSuggestions,
+    getSizes,
+  } = useImageGenerationWithStore(newsId, initialHeadline, summary);
+
+  const { images: galleryImages, deleteImage, clearAll, count: galleryCount, getTotalSize } = useImageGallery();
   const [showGallery, setShowGallery] = useState(false);
-
-  // Editable headline state - use ref to track if user has edited
-  const [editableHeadline, setEditableHeadline] = useState(initialHeadline || "");
-  const [suggestions, setSuggestions] = useState<HeadlineSuggestion | null>(null);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [hasUserEdited, setHasUserEdited] = useState(false);
-
-  // Track if we've already fetched suggestions
-  const hasFetchedSuggestions = useRef(false);
-
-  // Only update from prop if user hasn't manually edited
-  useEffect(() => {
-    if (!hasUserEdited && initialHeadline) {
-      setEditableHeadline(initialHeadline);
-    }
-  }, [initialHeadline, hasUserEdited]);
-
-  // Reset states when modal closes/reopens (initialHeadline changes significantly)
-  useEffect(() => {
-    setHasUserEdited(false);
-    setSuggestions(null);
-    hasFetchedSuggestions.current = false;
-  }, [initialHeadline]);
-
-  // Handle user input
-  const handleHeadlineChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditableHeadline(e.target.value);
-    setHasUserEdited(true);
-  }, []);
 
   const platformSizes = getSizes(selectedPlatform);
 
-  const handlePlatformChange = useCallback((platform: Platform) => {
-    setSelectedPlatform(platform);
-    const sizes = PLATFORM_IMAGE_SIZES[platform];
-    if (sizes && sizes.length > 0) {
-      setSelectedAspectRatio(sizes[0].aspectRatio);
-    }
-    setGeneratedImage(null);
-  }, []);
-
-  const handleGenerateSuggestions = useCallback(async () => {
-    setIsLoadingSuggestions(true);
-    try {
-      const response = await fetch("/api/headline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: initialHeadline,
-          content: originalContent || summary,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate suggestions");
-      }
-
-      const data = await response.json();
-      setSuggestions(data);
-      // Auto-select the main suggestion
-      if (data.main) {
-        setEditableHeadline(data.main.replace(/\\n/g, "\n"));
-      }
-    } catch (err) {
-      console.error("Failed to generate headline suggestions:", err);
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  }, [initialHeadline, summary, originalContent]);
-
-  const handleSelectSuggestion = useCallback((suggestion: string) => {
-    setEditableHeadline(suggestion.replace(/\\n/g, "\n"));
-    setHasUserEdited(true);
-  }, []);
-
   // Auto-fetch suggestions when component mounts with valid headline
   useEffect(() => {
-    if (autoFetchSuggestions && initialHeadline && !hasFetchedSuggestions.current) {
-      hasFetchedSuggestions.current = true;
-      handleGenerateSuggestions();
+    if (autoFetchSuggestions && initialHeadline && !suggestions) {
+      generateSuggestions(initialHeadline, originalContent || summary);
     }
-  }, [autoFetchSuggestions, initialHeadline, handleGenerateSuggestions]);
+  }, [autoFetchSuggestions, initialHeadline, suggestions, originalContent, summary, generateSuggestions]);
 
   const handleGenerate = useCallback(async () => {
-    const result = await generateImage({
-      headline: editableHeadline,
-      summary,
-      platform: selectedPlatform,
-      aspectRatio: selectedAspectRatio,
-    });
-
+    const result = await generateImage();
     if (result) {
-      setGeneratedImage(result);
       onImageGenerated?.(selectedPlatform, result);
-
-      // 갤러리에 저장
-      addImage({
-        base64: result.base64,
-        mimeType: result.mimeType,
-        headline: editableHeadline,
-        platform: selectedPlatform,
-        aspectRatio: selectedAspectRatio,
-        width: result.width,
-        height: result.height,
-      });
     }
-  }, [
-    generateImage,
-    editableHeadline,
-    summary,
-    selectedPlatform,
-    selectedAspectRatio,
-    onImageGenerated,
-    addImage,
-  ]);
+  }, [generateImage, selectedPlatform, onImageGenerated]);
 
   const handleDownload = useCallback(() => {
     if (!generatedImage) return;
@@ -197,7 +110,7 @@ export function ImageGenerator({
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleGenerateSuggestions}
+            onClick={() => generateSuggestions(initialHeadline, originalContent || summary)}
             disabled={isLoadingSuggestions}
             className="text-xs touch-target"
           >
@@ -217,7 +130,7 @@ export function ImageGenerator({
 
         <textarea
           value={editableHeadline}
-          onChange={handleHeadlineChange}
+          onChange={(e) => handleHeadlineChange(e.target.value)}
           className="w-full p-3 bg-white dark:bg-zinc-900 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 border-2 border-zinc-300 dark:border-zinc-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 outline-none resize-vertical min-h-[80px]"
           rows={3}
           placeholder="이미지에 표시될 헤드라인을 입력하세요"
@@ -307,7 +220,7 @@ export function ImageGenerator({
               key={size.aspectRatio}
               variant={selectedAspectRatio === size.aspectRatio ? "primary" : "secondary"}
               size="sm"
-              onClick={() => setSelectedAspectRatio(size.aspectRatio)}
+              onClick={() => handleAspectRatioChange(size.aspectRatio)}
             >
               {size.label}
               <span className="ml-1 text-xs opacity-70">
