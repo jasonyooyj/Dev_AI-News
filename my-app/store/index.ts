@@ -1,6 +1,25 @@
 import { create } from 'zustand';
-import { Source, NewsItem, StyleTemplate, Platform, QuickSummary, PlatformContent } from '@/types/news';
+import { Source, NewsItem, StyleTemplate, Platform, QuickSummary, PlatformContent, GeneratedImage } from '@/types/news';
 import { DEFAULT_SOURCES } from '@/lib/constants';
+
+// ============ Image Generation State Types ============
+interface HeadlineSuggestion {
+  main: string;
+  alternatives: string[];
+}
+
+interface ImageGenerationState {
+  newsId: string;
+  isGenerating: boolean;
+  error: string | null;
+  selectedPlatform: Platform;
+  selectedAspectRatio: string;
+  generatedImage: GeneratedImage | null;
+  editableHeadline: string;
+  suggestions: HeadlineSuggestion | null;
+  isLoadingSuggestions: boolean;
+  hasUserEdited: boolean;
+}
 
 // API helper functions
 async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
@@ -676,5 +695,173 @@ export const useUIStore = create<UIState>((set, get) => ({
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
+  },
+}));
+
+// ============ Image Generation Store ============
+interface ImageGenerationStoreState {
+  // State per news item
+  states: Record<string, ImageGenerationState>;
+
+  // Actions
+  getState: (newsId: string) => ImageGenerationState | undefined;
+  initState: (newsId: string, defaultHeadline: string, defaultPlatform?: Platform) => void;
+  setGenerating: (newsId: string, isGenerating: boolean) => void;
+  setError: (newsId: string, error: string | null) => void;
+  setSelectedPlatform: (newsId: string, platform: Platform) => void;
+  setSelectedAspectRatio: (newsId: string, aspectRatio: string) => void;
+  setGeneratedImage: (newsId: string, image: GeneratedImage | null) => void;
+  setEditableHeadline: (newsId: string, headline: string, userEdited?: boolean) => void;
+  setSuggestions: (newsId: string, suggestions: HeadlineSuggestion | null) => void;
+  setLoadingSuggestions: (newsId: string, isLoading: boolean) => void;
+  resetState: (newsId: string) => void;
+  clearAll: () => void;
+}
+
+const createDefaultImageState = (newsId: string, headline: string, platform: Platform = 'twitter'): ImageGenerationState => ({
+  newsId,
+  isGenerating: false,
+  error: null,
+  selectedPlatform: platform,
+  selectedAspectRatio: '9:16',
+  generatedImage: null,
+  editableHeadline: headline,
+  suggestions: null,
+  isLoadingSuggestions: false,
+  hasUserEdited: false,
+});
+
+export const useImageGenerationStore = create<ImageGenerationStoreState>((set, get) => ({
+  states: {},
+
+  getState: (newsId) => {
+    return get().states[newsId];
+  },
+
+  initState: (newsId, defaultHeadline, defaultPlatform = 'twitter') => {
+    const existing = get().states[newsId];
+    if (!existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: createDefaultImageState(newsId, defaultHeadline, defaultPlatform),
+        },
+      }));
+    } else if (!existing.hasUserEdited && defaultHeadline !== existing.editableHeadline) {
+      // Update headline only if user hasn't edited
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, editableHeadline: defaultHeadline },
+        },
+      }));
+    }
+  },
+
+  setGenerating: (newsId, isGenerating) => {
+    const existing = get().states[newsId];
+    if (existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, isGenerating, error: isGenerating ? null : existing.error },
+        },
+      }));
+    }
+  },
+
+  setError: (newsId, error) => {
+    const existing = get().states[newsId];
+    if (existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, error },
+        },
+      }));
+    }
+  },
+
+  setSelectedPlatform: (newsId, platform) => {
+    const existing = get().states[newsId];
+    if (existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, selectedPlatform: platform, generatedImage: null },
+        },
+      }));
+    }
+  },
+
+  setSelectedAspectRatio: (newsId, aspectRatio) => {
+    const existing = get().states[newsId];
+    if (existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, selectedAspectRatio: aspectRatio },
+        },
+      }));
+    }
+  },
+
+  setGeneratedImage: (newsId, image) => {
+    const existing = get().states[newsId];
+    if (existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, generatedImage: image },
+        },
+      }));
+    }
+  },
+
+  setEditableHeadline: (newsId, headline, userEdited = true) => {
+    const existing = get().states[newsId];
+    if (existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, editableHeadline: headline, hasUserEdited: userEdited },
+        },
+      }));
+    }
+  },
+
+  setSuggestions: (newsId, suggestions) => {
+    const existing = get().states[newsId];
+    if (existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, suggestions },
+        },
+      }));
+    }
+  },
+
+  setLoadingSuggestions: (newsId, isLoading) => {
+    const existing = get().states[newsId];
+    if (existing) {
+      set((state) => ({
+        states: {
+          ...state.states,
+          [newsId]: { ...existing, isLoadingSuggestions: isLoading },
+        },
+      }));
+    }
+  },
+
+  resetState: (newsId) => {
+    set((state) => {
+      const { [newsId]: _, ...rest } = state.states;
+      return { states: rest };
+    });
+  },
+
+  clearAll: () => {
+    set({ states: {} });
   },
 }));

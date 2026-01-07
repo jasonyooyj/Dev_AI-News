@@ -806,60 +806,63 @@ export function NewsDetail({
           </div>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'summary' && (
-          <SummaryTabContent quickSummary={news.quickSummary} />
-        )}
+        {/* Tab Content - Fixed height, no scroll */}
+        <div className="h-[50vh] overflow-hidden">
+          {activeTab === 'summary' && (
+            <SummaryTabContent quickSummary={news.quickSummary} />
+          )}
 
-        {activeTab === 'full-article' && (
-          <FullArticleTabContent
-            url={news.url}
-            title={news.title}
-            savedTranslation={news.translatedContent}
-            onSaveTranslation={handleSaveTranslation}
-          />
-        )}
-
-        {activeTab === 'generate' && (
-          <GenerateContentTabContent
-            platforms={platforms}
-            selectedPlatform={selectedPlatform}
-            onSelectPlatform={setSelectedPlatform}
-            onGenerate={handleGenerate}
-            isGenerating={isGenerating}
-            generatedContent={generatedContents[selectedPlatform]}
-            onThumbsUp={handleThumbsUp}
-            onRegenerateWithFeedback={handleRegenerateWithFeedback}
-            blueskyConnection={blueskyConnection}
-            threadsConnection={threadsConnection}
-            linkedinConnection={linkedinConnection}
-            instagramConnection={instagramConnection}
-            onBlueskyConnectClick={() => setIsBlueskyModalOpen(true)}
-            onThreadsConnectClick={() => setIsThreadsModalOpen(true)}
-            onLinkedInConnectClick={() => setIsLinkedInModalOpen(true)}
-            onInstagramConnectClick={() => setIsInstagramModalOpen(true)}
-            onPublishSuccess={handlePublishSuccess}
-            newsUrl={news.url}
-          />
-        )}
-
-        {activeTab === 'image' && (
-          <div className="space-y-4">
-            <div className="text-sm text-zinc-500 dark:text-zinc-400">
-              AI가 뉴스 내용에 맞는 이미지를 생성합니다. 상단에 Pretendard 폰트로 한글 헤드라인이 표시됩니다.
-            </div>
-            <ImageGenerator
-              headline={news.quickSummary?.bullets?.[0] || news.title}
-              summary={news.quickSummary?.bullets?.join(' ') || news.title}
-              originalContent={news.originalContent}
-              platforms={platforms}
-              autoFetchSuggestions={true}
-              onImageGenerated={(platform, image) => {
-                console.log('Image generated for', platform, image);
-              }}
+          {activeTab === 'full-article' && (
+            <FullArticleTabContent
+              url={news.url}
+              title={news.title}
+              savedTranslation={news.translatedContent}
+              onSaveTranslation={handleSaveTranslation}
             />
-          </div>
-        )}
+          )}
+
+          {activeTab === 'generate' && (
+            <GenerateContentTabContent
+              platforms={platforms}
+              selectedPlatform={selectedPlatform}
+              onSelectPlatform={setSelectedPlatform}
+              onGenerate={handleGenerate}
+              isGenerating={isGenerating}
+              generatedContent={generatedContents[selectedPlatform]}
+              onThumbsUp={handleThumbsUp}
+              onRegenerateWithFeedback={handleRegenerateWithFeedback}
+              blueskyConnection={blueskyConnection}
+              threadsConnection={threadsConnection}
+              linkedinConnection={linkedinConnection}
+              instagramConnection={instagramConnection}
+              onBlueskyConnectClick={() => setIsBlueskyModalOpen(true)}
+              onThreadsConnectClick={() => setIsThreadsModalOpen(true)}
+              onLinkedInConnectClick={() => setIsLinkedInModalOpen(true)}
+              onInstagramConnectClick={() => setIsInstagramModalOpen(true)}
+              onPublishSuccess={handlePublishSuccess}
+              newsUrl={news.url}
+            />
+          )}
+
+          {activeTab === 'image' && (
+            <div className="space-y-4">
+              <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                AI가 뉴스 내용에 맞는 이미지를 생성합니다. 상단에 Pretendard 폰트로 한글 헤드라인이 표시됩니다.
+              </div>
+              <ImageGenerator
+                newsId={news.id}
+                headline={news.quickSummary?.bullets?.[0] || news.title}
+                summary={news.quickSummary?.bullets?.join(' ') || news.title}
+                originalContent={news.originalContent}
+                platforms={platforms}
+                autoFetchSuggestions={true}
+                onImageGenerated={(platform, image) => {
+                  console.log('Image generated for', platform, image);
+                }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <ModalFooter>
