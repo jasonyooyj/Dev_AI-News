@@ -148,6 +148,18 @@ export function PlatformPreview({ platform, content }: PlatformPreviewProps) {
     return content.content.length;
   }, [content]);
 
+  // 복사할 전체 콘텐츠 (해시태그 포함)
+  const copyContent = useMemo(() => {
+    if (!content?.content) return '';
+    if (content.hashtags && content.hashtags.length > 0) {
+      const hashtagsText = content.hashtags
+        .map((t) => `#${t.replace(/^#/, '')}`)
+        .join(' ');
+      return `${content.content}\n\n${hashtagsText}`;
+    }
+    return content.content;
+  }, [content]);
+
   if (!content) {
     return (
       <Card
@@ -192,7 +204,7 @@ export function PlatformPreview({ platform, content }: PlatformPreviewProps) {
             />
           </div>
         </div>
-        <CopyButton content={content.content} />
+        <CopyButton content={copyContent} />
       </div>
 
       {/* Content Preview */}
