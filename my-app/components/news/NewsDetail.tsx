@@ -806,8 +806,8 @@ export function NewsDetail({
           </div>
         </div>
 
-        {/* Tab Content - Fixed height, no scroll */}
-        <div className="h-[50vh] overflow-hidden">
+        {/* Tab Content - Fixed height with scroll */}
+        <div className="h-[50vh] overflow-y-auto overscroll-contain">
           {activeTab === 'summary' && (
             <SummaryTabContent quickSummary={news.quickSummary} />
           )}
