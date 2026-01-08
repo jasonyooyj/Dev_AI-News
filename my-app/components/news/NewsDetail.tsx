@@ -11,6 +11,8 @@ import {
   ListChecks,
   Bookmark,
   ImageIcon,
+  Share2,
+  Check,
 } from 'lucide-react';
 import { Modal, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -621,6 +623,7 @@ export function NewsDetail({
   const [isThreadsModalOpen, setIsThreadsModalOpen] = useState(false);
   const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
   const [isInstagramModalOpen, setIsInstagramModalOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Social connections hook
   const { getConnection, connectBluesky, connectThreads, connectLinkedIn, connectInstagram, savePublishResult } = useSocialConnections();
@@ -662,6 +665,25 @@ export function NewsDetail({
 
   const handleViewOriginal = () => {
     window.open(news.url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?news=${news.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      // Fallback for browsers without clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = shareUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
   };
 
   const handleBlueskyConnect = async (profile: {
@@ -868,6 +890,17 @@ export function NewsDetail({
       <ModalFooter>
         <Button variant="ghost" onClick={onClose}>
           Close
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={handleShare}
+          className={isCopied
+            ? "text-green-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+            : "text-zinc-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          }
+          leftIcon={isCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+        >
+          {isCopied ? 'Copied!' : 'Share'}
         </Button>
         <Button
           variant="ghost"

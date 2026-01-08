@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import {
   ExternalLink,
   Trash2,
@@ -10,6 +10,8 @@ import {
   Youtube,
   Rss,
   Globe,
+  Share2,
+  Check,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -137,6 +139,7 @@ export const NewsCard = memo(function NewsCard({
   onBookmark,
   isSummarizing = false,
 }: NewsCardProps) {
+  const [isCopied, setIsCopied] = useState(false);
   const hasQuickSummary = news.quickSummary && news.quickSummary.bullets.length > 0;
   const isBookmarked = news.isBookmarked ?? false;
   const priority = news.priority || 'medium';
@@ -145,6 +148,25 @@ export const NewsCard = memo(function NewsCard({
   // Get platform style based on source type
   const sourceType = source?.type || 'blog';
   const platformStyle = platformStyles[sourceType];
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?news=${news.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      // Fallback for browsers without clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = shareUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
 
   return (
     <Card
@@ -238,6 +260,20 @@ export const NewsCard = memo(function NewsCard({
             title={isBookmarked ? "Remove bookmark" : "Bookmark"}
           >
             <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleShare}
+            className={isCopied
+              ? "text-green-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+              : "text-zinc-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            }
+            aria-label={isCopied ? "Link copied" : "Share link"}
+            title={isCopied ? "Copied!" : "Copy link"}
+          >
+            {isCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
           </Button>
 
           <Button
