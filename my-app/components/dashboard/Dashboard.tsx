@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { NewsList } from '@/components/news/NewsList';
 import { NewsDetail } from '@/components/news/NewsDetail';
@@ -36,6 +37,11 @@ export function Dashboard() {
   const saveGeneratedContent = useNewsStore((s) => s.saveGeneratedContent);
   const { lastReadAt, fetchLastReadAt, markAllAsRead } = useUIStore();
 
+  // URL params for sharing
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
   // Fetch lastReadAt on mount
   useEffect(() => {
     fetchLastReadAt();
@@ -44,6 +50,18 @@ export function Dashboard() {
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   // Get the actual news item from store (stays in sync with updates)
   const selectedNews = selectedNewsId ? newsItems.find(n => n.id === selectedNewsId) || null : null;
+
+  // Open news from URL parameter on initial load
+  useEffect(() => {
+    const newsIdFromUrl = searchParams.get('news');
+    if (newsIdFromUrl && newsItems.length > 0 && !selectedNewsId) {
+      const newsToOpen = newsItems.find(n => n.id === newsIdFromUrl);
+      if (newsToOpen) {
+        setSelectedNewsId(newsIdFromUrl);
+        setGeneratedContents(newsToOpen.generatedContents || {});
+      }
+    }
+  }, [searchParams, newsItems, selectedNewsId]);
   const [activeTab, setActiveTab] = useState<'news' | 'collect'>('news');
   const [summarizingIds] = useState<string[]>([]);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
@@ -65,6 +83,10 @@ export function Dashboard() {
     setSelectedNewsId(newsItem.id);
     // Load saved generated contents from the news item
     setGeneratedContents(newsItem.generatedContents || {});
+    // Update URL for sharing
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('news', newsItem.id);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const handleGenerateContent = async (
@@ -144,6 +166,11 @@ export function Dashboard() {
   const handleCloseNewsDetail = () => {
     setSelectedNewsId(null);
     setGeneratedContents({});
+    // Remove news param from URL
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('news');
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(newUrl, { scroll: false });
   };
 
   const handleFetchSource = useCallback(async (source: Source, skipMarkAsRead = false): Promise<FetchResult> => {
