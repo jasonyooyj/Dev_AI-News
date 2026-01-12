@@ -14,7 +14,7 @@ npm run build               # 빌드
 | 항목 | 내용 |
 |------|------|
 | **What** | AI 뉴스 수집 → AI 요약 → 소셜 미디어 콘텐츠/이미지 생성 대시보드 |
-| **Version** | 0.9.5 |
+| **Version** | 0.9.6 |
 | **Auth** | 없음 (공개 접근, DEFAULT_USER_ID 사용) |
 | **Stack** | Next.js 15 + Neon PostgreSQL + Gemini AI |
 | **State** | Zustand (client) + TanStack Query (server) |

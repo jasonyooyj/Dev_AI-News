@@ -170,7 +170,7 @@ const platformConfigs: Record<
 - 이모지 1-2개만
 
 ## 해시태그
-- 1-2개 최대
+- 5개 이하
 - 본문에 자연스럽게 포함`,
   },
   threads: {
@@ -184,7 +184,7 @@ const platformConfigs: Record<
 - 2-3문단으로 정보 전달
 - 문단 사이 줄바꿈
 - 질문으로 마무리해 댓글 유도
-- 해시태그 불필요 (선택적)`,
+- 해시태그 5개 이하`,
   },
   instagram: {
     maxLength: 2200,
@@ -227,7 +227,7 @@ const platformConfigs: Record<
 ## 포맷
 - 짧은 문단
 - 이모지 최소화 (0-3개)
-- 해시태그 3-5개 (전문적)`,
+- 해시태그 5개 이하 (전문적)`,
   },
 };
 
@@ -282,14 +282,13 @@ ${url ? `링크: ${url}` : ""}
 {
   "content": "캡션 (훅 라인으로 시작, 줄바꿈 포함, CTA 포함)",
   "charCount": 글자수,
-  "hashtags": ["해시태그들 8-15개"]
+  "hashtags": ["해시태그 5개"]
 }
 
-## 해시태그 구성 (8-15개)
-- 대중적 (3-4개): AI, Tech, Innovation, MachineLearning
-- 전문적 (3-4개): LLM, GPT, GenAI, MLOps, RAG
-- 한국어 (2-3개): 인공지능, 테크뉴스, AI소식, 딥러닝
-- 주제 관련 (2-3개): 뉴스 내용에 맞게`;
+## 해시태그 구성 (5개)
+- 대중적 (1-2개): AI, Tech
+- 전문적 (1-2개): LLM, GPT, GenAI
+- 한국어/주제 관련 (1-2개): 인공지능, 테크뉴스`;
 }
 
 export async function generatePlatformContent(
@@ -389,7 +388,7 @@ export async function regenerateContent(
         ? `## X(트위터) 스타일
 - 한 문장으로 임팩트 있게
 - 이모지 1-2개만
-- 해시태그 1-2개`
+- 해시태그 5개 이하`
         : platform === "threads"
           ? `## Threads 스타일
 - 대화체, 친근하게

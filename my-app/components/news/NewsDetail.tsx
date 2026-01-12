@@ -773,9 +773,9 @@ export function NewsDetail({
       title={news.title}
       size="xl"
     >
-      <div className="space-y-4">
+      <div className="flex flex-col h-[70vh] -m-4 sm:-m-5">
         {/* Meta Info */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-shrink-0 flex flex-wrap items-center gap-3 px-4 sm:px-5 pt-4 sm:pt-5 pb-3">
           {source && (
             <Badge variant="info" size="md">
               {source.name}
@@ -794,9 +794,9 @@ export function NewsDetail({
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="flex gap-1 overflow-x-auto">
+        {/* Tabs - Fixed, no vertical scroll */}
+        <div className="flex-shrink-0 border-b border-zinc-200 dark:border-zinc-800 px-4 sm:px-5">
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             <Tab
               id="summary"
               label="Summary"
@@ -828,8 +828,8 @@ export function NewsDetail({
           </div>
         </div>
 
-        {/* Tab Content - Fixed height with scroll */}
-        <div className="h-[50vh] overflow-y-auto overscroll-contain">
+        {/* Tab Content - Fills remaining space, scrolls internally */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4">
           {activeTab === 'summary' && (
             <SummaryTabContent quickSummary={news.quickSummary} />
           )}
