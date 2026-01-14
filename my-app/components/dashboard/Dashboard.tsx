@@ -51,17 +51,26 @@ export function Dashboard() {
   // Get the actual news item from store (stays in sync with updates)
   const selectedNews = selectedNewsId ? newsItems.find(n => n.id === selectedNewsId) || null : null;
 
-  // Open news from URL parameter on initial load
+  // Track if initial URL load has been handled
+  const [initialUrlHandled, setInitialUrlHandled] = useState(false);
+
+  // Open news from URL parameter on initial load only
   useEffect(() => {
+    if (initialUrlHandled) return; // Skip if already handled
+
     const newsIdFromUrl = searchParams.get('news');
-    if (newsIdFromUrl && newsItems.length > 0 && !selectedNewsId) {
+    if (newsIdFromUrl && newsItems.length > 0) {
       const newsToOpen = newsItems.find(n => n.id === newsIdFromUrl);
       if (newsToOpen) {
         setSelectedNewsId(newsIdFromUrl);
         setGeneratedContents(newsToOpen.generatedContents || {});
       }
+      setInitialUrlHandled(true);
+    } else if (newsItems.length > 0) {
+      // No news param but items loaded - mark as handled
+      setInitialUrlHandled(true);
     }
-  }, [searchParams, newsItems, selectedNewsId]);
+  }, [searchParams, newsItems, initialUrlHandled]);
   const [activeTab, setActiveTab] = useState<'news' | 'collect'>('news');
   const [summarizingIds] = useState<string[]>([]);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);

@@ -1,6 +1,6 @@
 {
   "name": "my-app",
-  "version": "0.9.7",
+  "version": "0.9.8",
   "private": true,
   "scripts": {
     "dev": "npx @react-grab/claude-code@latest && next dev",
